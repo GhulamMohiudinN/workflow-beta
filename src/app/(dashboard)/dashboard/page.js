@@ -95,24 +95,35 @@ export default function DashboardPage() {
 
         // Fetch Overview Data
         const overviewData = await workspaceAPI.getWorkspaceOverview();
-        if (overviewData.success) {
+        console.info("Dashboard overview payload:", overviewData);
+        if (overviewData?.success || overviewData?.isSuccess) {
           setOverview(overviewData);
         } else {
-          throw new Error("Failed to fetch overview data");
+          throw new Error(
+            overviewData?.error ||
+              overviewData?.message ||
+              "Failed to fetch overview data",
+          );
         }
 
         // Fetch Recent Non-Admin Members (Senior level dynamic retrieval)
         try {
           const usersData = await userAPI.getWorkspaceUsers({ limit: 10 });
-          const allUsers = usersData?.users || usersData?.members || usersData?.data || [];
-          
+          const allUsers =
+            usersData?.users || usersData?.members || usersData?.data || [];
+
           let parsedUser = {};
           if (storedUser) parsedUser = JSON.parse(storedUser);
-          
+
           const filteredMembers = allUsers
-            .filter(u => u.role !== "admin" && u.role !== "superadmin" && u._id !== parsedUser._id)
+            .filter(
+              (u) =>
+                u.role !== "admin" &&
+                u.role !== "superadmin" &&
+                u._id !== parsedUser._id,
+            )
             .slice(0, 2);
-            
+
           setRecentMembers(filteredMembers);
         } catch (err) {
           console.error("Failed to load workspace members for side panel", err);
@@ -155,7 +166,9 @@ export default function DashboardPage() {
       <div className="py-12 px-4 max-w-lg mx-auto text-center">
         <div className="bg-red-50 p-6 rounded-2xl border border-red-100">
           <FiAlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
+            Something went wrong
+          </h2>
           <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={() => window.location.reload()}
@@ -204,6 +217,13 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {overview?.fallback && (
+        <div className="mb-8 rounded-2xl border border-amber-100 bg-amber-50 px-6 py-4 text-sm text-amber-800">
+          Limited dashboard metrics are shown because your current role does not
+          have permission to access the standard workspace overview endpoint.
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -317,8 +337,13 @@ export default function DashboardPage() {
             {overview?.recentActivities?.length > 0 ? (
               <div className="space-y-6">
                 {overview.recentActivities.map((activity) => (
-                  <div key={activity._id} className="flex items-start space-x-4">
-                    <div className={`p-2.5 rounded-xl ${getActivityBgColor(activity.action)}`}>
+                  <div
+                    key={activity._id}
+                    className="flex items-start space-x-4"
+                  >
+                    <div
+                      className={`p-2.5 rounded-xl ${getActivityBgColor(activity.action)}`}
+                    >
                       {getActivityIcon(activity.action)}
                     </div>
                     <div className="flex-1">
@@ -347,8 +372,12 @@ export default function DashboardPage() {
                 <div className="bg-gray-50 rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
                   <FiActivity className="h-8 w-8 text-gray-400" />
                 </div>
-                <p className="text-gray-500 font-medium">No recent activity found</p>
-                <p className="text-sm text-gray-400 mt-1">Activities will appear here as you work</p>
+                <p className="text-gray-500 font-medium">
+                  No recent activity found
+                </p>
+                <p className="text-sm text-gray-400 mt-1">
+                  Activities will appear here as you work
+                </p>
               </div>
             )}
           </div>
@@ -381,8 +410,8 @@ export default function DashboardPage() {
                         <div className="flex items-center space-x-3">
                           <div className="shrink-0 relative">
                             {member.profilePicture ? (
-                              <img 
-                                src={member.profilePicture} 
+                              <img
+                                src={member.profilePicture}
                                 alt={member.name}
                                 className="h-10 w-10 rounded-full object-cover ring-2 ring-white shadow-sm"
                               />
@@ -414,16 +443,20 @@ export default function DashboardPage() {
                   })
                 ) : (
                   <div className="text-center py-4 bg-gray-50 rounded-xl">
-                    <p className="text-xs text-gray-500">No other members yet</p>
+                    <p className="text-xs text-gray-500">
+                      No other members yet
+                    </p>
                   </div>
                 )}
-                
+
                 <Link
                   href="/users/add"
                   className="flex items-center justify-center w-full p-3 border-2 border-dashed border-gray-200 rounded-xl text-gray-500 hover:text-amber-600 hover:border-amber-300 hover:bg-amber-50/30 transition-all duration-200 group"
                 >
                   <FiPlus className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
-                  <span className="text-sm font-medium">Invite team member</span>
+                  <span className="text-sm font-medium">
+                    Invite team member
+                  </span>
                 </Link>
               </div>
             </div>
@@ -432,12 +465,12 @@ export default function DashboardPage() {
           {/* Quick Actions */}
           <div className="bg-white rounded-3xl p-7 text-gray-900 shadow-xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 -mr-12 -mt-12 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all duration-500"></div>
-            
+
             <h3 className="text-lg font-bold mb-5 flex items-center">
               <FiSettings className="mr-2 text-amber-400 animate-pulse-slow" />
               Quick Actions
             </h3>
-            
+
             <div className="space-y-3 relative z-10">
               <Link
                 href="/users/add"
@@ -451,7 +484,7 @@ export default function DashboardPage() {
                 </div>
                 <FiChevronRight className="h-4 w-4 opacity-50" />
               </Link>
-              
+
               <Link
                 href="/processes"
                 className="flex items-center justify-between p-3.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-2xl transition-all duration-300 border hover:border-amber-600 border-amber-200"
@@ -464,7 +497,7 @@ export default function DashboardPage() {
                 </div>
                 <FiChevronRight className="h-4 w-4 opacity-50" />
               </Link>
-              
+
               <Link
                 href="/company"
                 className="flex items-center justify-between p-3.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-2xl transition-all duration-300 border hover:border-amber-600 border-amber-200 "

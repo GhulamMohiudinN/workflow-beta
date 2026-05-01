@@ -19,16 +19,19 @@ const api = axios.create({
 // Request interceptor — attach auth token + log every outgoing request
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token") || localStorage.getItem("accessToken");
+    const token =
+      localStorage.getItem("token") || localStorage.getItem("accessToken");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     // Attach a timestamp so we can compute duration in the response interceptor
     config.metadata = { startTime: Date.now() };
-    console.log(
-      `[API ▶]  ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`,
-      config.params ? config.params : "",
-    );
+
+    const method = (config.method || "GET").toUpperCase();
+    const url = `${config.baseURL}${config.url}`;
+    const payload = config.params || config.data || null;
+
+    console.info("[API ▶] Request", { method, url, payload });
     return config;
   },
   (error) => {
@@ -41,22 +44,33 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => {
     const ms = Date.now() - (response.config.metadata?.startTime ?? Date.now());
-    console.log(
-      `[API ✔]  ${response.config.method?.toUpperCase()} ${response.config.url}`,
-      `→ ${response.status} (${ms}ms)`,
-    );
+    const method = (response.config.method || "GET").toUpperCase();
+    const url = response.config.url;
+    console.info("[API ✔] Response", {
+      method,
+      url,
+      status: response.status,
+      durationMs: ms,
+      data: response.data,
+    });
     return response;
   },
   async (error) => {
-    const originalRequest = error.config;
-    const ms = Date.now() - (originalRequest?.metadata?.startTime ?? Date.now());
-    if (error.response?.status !== 403) {
-      console.error(
-        `[API ✖]  ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}`,
-        `→ ${error.response?.status ?? "ERR"} (${ms}ms)`,
-        error.response?.data?.message || error.message,
-      );
-    }
+    const originalRequest = error.config || {};
+    const ms =
+      Date.now() - (originalRequest?.metadata?.startTime ?? Date.now());
+    const method = (originalRequest.method || "GET").toUpperCase();
+    const url = originalRequest.url || "unknown";
+    const statusCode = error.response?.status ?? "ERR";
+    const details = error.response?.data || error.message;
+
+    console.error("[API ✖] Response error", {
+      method,
+      url,
+      status: statusCode,
+      durationMs: ms,
+      details,
+    });
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
