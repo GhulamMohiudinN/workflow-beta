@@ -108,7 +108,7 @@ function StepNode({ step, isSelected, onClick }) {
            <div className="flex items-center gap-2.5">
              <div className="w-2 h-2 rounded-full bg-gray-600" />
              <span className="text-[11px] font-medium text-gray-400 truncate max-w-[120px]">
-               {typeof step.assignee === 'object' ? step.assignee.name : (step.assignee || "Unassigned")}
+                {step.assignee && typeof step.assignee === 'object' ? step.assignee.name : (step.assignee || "Unassigned")}
              </span>
            </div>
            {step.estimateTime && (
