@@ -1,1 +1,57 @@
 @import "tailwindcss";
+
+:root {
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-secondary: #0d9488;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #2563eb;
+  --color-bg: #f6f8fb;
+  --color-bg-soft: #eef3f8;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f8fafc;
+  --color-border: #e2e8f0;
+  --color-border-strong: #cbd5e1;
+  --color-text: #111827;
+  --color-muted: #64748b;
+  --color-faint: #94a3b8;
+  --shadow-card: 0 10px 30px rgba(15, 23, 42, 0.06);
+  --shadow-popover: 0 18px 45px rgba(15, 23, 42, 0.1);
+}
+
+html {
+  background: var(--color-bg);
+}
+
+body {
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-geist-sans), Inter, Segoe UI, Roboto, sans-serif;
+  letter-spacing: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.app-card {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.app-focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.app-focus:focus-visible {
+  outline-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+}

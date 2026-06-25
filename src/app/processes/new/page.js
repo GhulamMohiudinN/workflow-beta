@@ -27,6 +27,56 @@ import {
   FiCopy,
 } from "react-icons/fi";
 
+const fieldClass =
+  "w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100";
+const labelClass = "mb-2 block text-xs font-semibold text-slate-700";
+const primaryButtonClass =
+  "inline-flex items-center justify-center gap-2 rounded-lg bg-blue-700 px-7 py-3 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(37,99,235,0.22)] transition hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-50";
+const secondaryButtonClass =
+  "inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700";
+
+function ProcessStepper({ steps, activeStep, onStepClick }) {
+  return (
+    <div className="mx-auto mb-7 max-w-3xl px-4">
+      <div className="relative flex items-start justify-between">
+        <div className="absolute left-8 right-8 top-4 h-px bg-blue-100" />
+        {steps.map((step) => {
+          const isActive = step.number === activeStep;
+          const isComplete = step.number < activeStep;
+
+          return (
+            <button
+              key={step.number}
+              type="button"
+              onClick={() => onStepClick(step.number)}
+              className="relative flex min-w-0 flex-col items-center gap-2"
+            >
+              <span
+                className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-black shadow-sm transition ${
+                  isActive
+                    ? "bg-blue-700 text-white shadow-blue-200"
+                    : isComplete
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-slate-100 text-slate-400"
+                }`}
+              >
+                {isComplete ? <FiCheck className="h-4 w-4" /> : step.number}
+              </span>
+              <span
+                className={`max-w-24 truncate text-center text-[10px] font-black ${
+                  isActive ? "text-blue-700" : "text-slate-500"
+                }`}
+              >
+                {step.title}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function NewProcessPage() {
   const router = useRouter();
   const [activeStep, setActiveStep] = useState(1);
@@ -43,6 +93,8 @@ export default function NewProcessPage() {
     name: "",
     description: "",
     category: "",
+    priority: "High",
+    estimatedDuration: "",
     visibility: "private",
     assignedTo: [],
     steps: [
@@ -344,103 +396,148 @@ export default function NewProcessPage() {
     switch (activeStep) {
       case 1:
         return (
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Process Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => handleInputChange("name", e.target.value)}
-                className="w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
-                placeholder="e.g., Employee Onboarding Process"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Give your process a clear, descriptive name
-              </p>
+          <div className="space-y-7">
+            <div className="flex items-start gap-3">
+              <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+                <FiLayers className="h-4 w-4" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-slate-950">
+                  Process Definition
+                </h2>
+                <p className="mt-1 text-xs font-medium text-slate-500">
+                  Establish the core identity and objective of this operational workflow.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-2">
+              <div>
+                <label className={labelClass}>
+                  Process Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange("name", e.target.value)}
+                  className={fieldClass}
+                  placeholder="e.g. Q4 Financial Audit"
+                />
+              </div>
+
+              <div>
+                <label className={labelClass}>
+                  Category <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.category}
+                  onChange={(e) => handleInputChange("category", e.target.value)}
+                  className={fieldClass}
+                >
+                  <option value="">Select category</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description
-              </label>
+              <label className={labelClass}>Description</label>
               <textarea
                 value={formData.description}
                 onChange={(e) =>
                   handleInputChange("description", e.target.value)
                 }
-                rows="4"
-                className="w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
-                placeholder="Describe what this process accomplishes and why it's important..."
+                rows="5"
+                className={fieldClass}
+                placeholder="Describe the goals and impact of this process..."
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category <span className="text-red-500">*</span>
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {categories.map((cat) => (
-                  <div
-                    key={cat}
-                    className={`border rounded-lg p-3 text-center cursor-pointer transition-all ${
-                      formData.category === cat
-                        ? "border-amber-500 bg-amber-50 shadow-sm"
-                        : "border-gray-300 hover:border-amber-300 hover:bg-amber-50/50"
-                    }`}
-                    onClick={() => handleInputChange("category", cat)}
-                  >
-                    <span className="text-sm font-medium text-gray-900">
-                      {cat}
-                    </span>
-                  </div>
-                ))}
+            <div className="grid gap-5 md:grid-cols-2">
+              <div>
+                <label className={labelClass}>Priority Level</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {["High", "Medium", "Low"].map((priority) => (
+                    <button
+                      key={priority}
+                      type="button"
+                      onClick={() => handleInputChange("priority", priority)}
+                      className={`h-9 rounded-md border text-xs font-bold transition ${
+                        formData.priority === priority
+                          ? "border-blue-700 bg-blue-50 text-blue-700"
+                          : "border-slate-300 bg-white text-slate-600 hover:border-blue-300"
+                      }`}
+                    >
+                      {priority}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className={labelClass}>Estimated Duration</label>
+                <div className="flex overflow-hidden rounded-lg border border-slate-300 bg-white focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-100">
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.estimatedDuration}
+                    onChange={(e) =>
+                      handleInputChange("estimatedDuration", e.target.value)
+                    }
+                    className="min-w-0 flex-1 px-4 py-3 text-sm outline-none"
+                    placeholder="e.g. 14"
+                  />
+                  <span className="flex items-center border-l border-slate-200 px-4 text-xs font-bold text-slate-600">
+                    Days
+                  </span>
+                </div>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Visibility
-              </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div
-                  className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                    formData.visibility === "private"
-                      ? "border-amber-500 bg-amber-50"
-                      : "border-gray-300 hover:border-amber-300"
-                  }`}
-                  onClick={() => handleInputChange("visibility", "private")}
-                >
-                  <div className="flex items-center mb-2">
-                    <div
-                      className={`h-3 w-3 rounded-full mr-2 ${formData.visibility === "private" ? "bg-amber-500" : "bg-gray-300"}`}
-                    ></div>
-                    <span className="font-medium text-gray-900">Private</span>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    Only assigned team members can view and manage
-                  </p>
-                </div>
-
-                <div
-                  className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                    formData.visibility === "public"
-                      ? "border-amber-500 bg-amber-50"
-                      : "border-gray-300 hover:border-amber-300"
-                  }`}
-                  onClick={() => handleInputChange("visibility", "public")}
-                >
-                  <div className="flex items-center mb-2">
-                    <div
-                      className={`h-3 w-3 rounded-full mr-2 ${formData.visibility === "public" ? "bg-amber-500" : "bg-gray-300"}`}
-                    ></div>
-                    <span className="font-medium text-gray-900">Public</span>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    All workspace members can view (read-only)
-                  </p>
-                </div>
+              <label className={labelClass}>Visibility</label>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {[
+                  {
+                    value: "private",
+                    title: "Private",
+                    text: "Only assigned team members can view and manage.",
+                  },
+                  {
+                    value: "public",
+                    title: "Public",
+                    text: "All workspace members can view this process.",
+                  },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleInputChange("visibility", option.value)}
+                    className={`rounded-lg border p-4 text-left transition ${
+                      formData.visibility === option.value
+                        ? "border-blue-700 bg-blue-50"
+                        : "border-slate-300 bg-white hover:border-blue-300"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                      <span
+                        className={`h-2.5 w-2.5 rounded-full ${
+                          formData.visibility === option.value
+                            ? "bg-blue-700"
+                            : "bg-slate-300"
+                        }`}
+                      />
+                      {option.title}
+                    </span>
+                    <span className="mt-2 block text-xs font-medium text-slate-500">
+                      {option.text}
+                    </span>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -461,7 +558,7 @@ export default function NewProcessPage() {
               <button
                 type="button"
                 onClick={addNewStep}
-                className="inline-flex items-center px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all shadow-sm"
+                className={primaryButtonClass}
               >
                 <FiPlus className="mr-2 h-4 w-4" />
                 Add Step
@@ -472,12 +569,12 @@ export default function NewProcessPage() {
               {formData.steps.map((step, index) => (
                 <div
                   key={step.id}
-                  className="bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-all"
+                  className="rounded-xl border border-slate-200 bg-white p-5 transition-all hover:shadow-md"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="bg-white border-2 border-amber-200 rounded-lg px-4 py-2 shadow-sm">
-                        <span className="font-bold text-amber-600">
+                      <div className="rounded-lg border-2 border-blue-100 bg-blue-50 px-4 py-2 shadow-sm">
+                        <span className="font-bold text-blue-700">
                           Step {step.order}
                         </span>
                       </div>
@@ -485,7 +582,7 @@ export default function NewProcessPage() {
                         <button
                           onClick={() => moveStepUp(index)}
                           disabled={index === 0}
-                          className="p-1.5 text-gray-400 hover:text-amber-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          className="p-1.5 text-gray-400 transition-colors hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-30"
                           title="Move Up"
                         >
                           <FiChevronLeft className="h-5 w-5" />
@@ -493,7 +590,7 @@ export default function NewProcessPage() {
                         <button
                           onClick={() => moveStepDown(index)}
                           disabled={index === formData.steps.length - 1}
-                          className="p-1.5 text-gray-400 hover:text-amber-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          className="p-1.5 text-gray-400 transition-colors hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-30"
                           title="Move Down"
                         >
                           <FiChevronRight className="h-5 w-5" />
@@ -522,7 +619,7 @@ export default function NewProcessPage() {
                         onChange={(e) =>
                           handleStepChange(step.id, "title", e.target.value)
                         }
-                        className="w-full border border-gray-300 rounded-lg py-2.5 px-3 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                        className={fieldClass}
                         placeholder="Enter step title"
                       />
                     </div>
@@ -539,7 +636,7 @@ export default function NewProcessPage() {
                             e.target.value,
                           )
                         }
-                        className="w-full border border-gray-300 rounded-lg py-2.5 px-3 focus:ring-2 focus:ring-amber-500"
+                        className={fieldClass}
                       >
                         <option value="15 min">15 minutes</option>
                         <option value="30 min">30 minutes</option>
@@ -563,7 +660,7 @@ export default function NewProcessPage() {
                         handleStepChange(step.id, "description", e.target.value)
                       }
                       rows="2"
-                      className="w-full border border-gray-300 rounded-lg py-2.5 px-3 focus:ring-2 focus:ring-amber-500"
+                      className={fieldClass}
                       placeholder="Describe what happens in this step"
                     />
                   </div>
@@ -577,7 +674,7 @@ export default function NewProcessPage() {
                       onChange={(e) =>
                         handleStepChange(step.id, "assignee", e.target.value)
                       }
-                      className="w-full border border-gray-300 rounded-lg py-2.5 px-3 focus:ring-2 focus:ring-amber-500 bg-white"
+                      className={fieldClass}
                     >
                       <option value="">Select team member</option>
                       {workspaceUsers
@@ -597,9 +694,9 @@ export default function NewProcessPage() {
               ))}
             </div>
 
-            <div className="bg-amber-50 rounded-xl border border-amber-200 p-4">
+            <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
               <div className="flex items-start gap-3">
-                <FiHelpCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                <FiHelpCircle className="h-5 w-5 text-blue-700 mt-0.5" />
                 <div>
                   <p className="font-medium text-gray-900">Pro Tips</p>
                   <ul className="text-sm text-gray-600 mt-2 space-y-1">
@@ -632,7 +729,7 @@ export default function NewProcessPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {loadingUsers ? (
                   <div className="col-span-2 py-12 flex flex-col items-center justify-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500 mb-2"></div>
+                    <div className="mb-2 h-8 w-8 animate-spin rounded-full border-b-2 border-blue-700"></div>
                     <p className="text-sm text-gray-500">Fetching workspace members...</p>
                   </div>
                 ) : workspaceUsers.length === 0 ? (
@@ -653,8 +750,8 @@ export default function NewProcessPage() {
                       key={member._id}
                       className={`border rounded-xl p-4 cursor-pointer transition-all flex items-center gap-3 ${
                         formData.assignedTo.includes(member._id)
-                          ? "border-amber-500 bg-amber-50 shadow-sm"
-                          : "border-gray-200 hover:border-amber-300 hover:bg-amber-50/30"
+                          ? "border-blue-700 bg-blue-50 shadow-sm"
+                          : "border-gray-200 hover:border-blue-300 hover:bg-blue-50/30"
                       }`}
                       onClick={() => {
                         const newAssigned = formData.assignedTo.includes(member._id)
@@ -666,7 +763,7 @@ export default function NewProcessPage() {
                       <div
                         className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                           formData.assignedTo.includes(member._id)
-                            ? "bg-amber-500 text-white"
+                            ? "bg-blue-700 text-white"
                             : "bg-gray-200 text-gray-600"
                         }`}
                       >
@@ -727,7 +824,7 @@ export default function NewProcessPage() {
                 {/* Notifications Section */}
                 <div>
                   <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
-                    <FiBell className="h-4 w-4 text-amber-500" />
+                    <FiBell className="h-4 w-4 text-blue-700" />
                     Notification Settings
                   </h4>
                   <div className="space-y-3">
@@ -758,8 +855,8 @@ export default function NewProcessPage() {
                                 [key]: !value,
                               })
                             }
-                            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 ${
-                              value ? "bg-amber-500" : "bg-gray-300"
+                            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                              value ? "bg-blue-700" : "bg-gray-300"
                             }`}
                           >
                             <span
@@ -777,7 +874,7 @@ export default function NewProcessPage() {
                 {/* Automation Section */}
                 <div>
                   <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
-                    <FiZap className="h-4 w-4 text-amber-500" />
+                    <FiZap className="h-4 w-4 text-blue-700" />
                     Automation Rules
                   </h4>
                   <div className="space-y-3">
@@ -811,8 +908,8 @@ export default function NewProcessPage() {
                               [key]: !value,
                             })
                           }
-                          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 ${
-                            value ? "bg-amber-500" : "bg-gray-300"
+                          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                            value ? "bg-blue-700" : "bg-gray-300"
                           }`}
                         >
                           <span
@@ -831,7 +928,7 @@ export default function NewProcessPage() {
                   <h4 className="font-medium text-gray-900 mb-4">
                     Attachments (Optional)
                   </h4>
-                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-amber-300 transition-colors cursor-pointer">
+                  <div className="cursor-pointer rounded-xl border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-blue-300">
                     <FiUpload className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                     <p className="text-gray-600 mb-2">
                       Drag and drop files here, or click to browse
@@ -856,16 +953,16 @@ export default function NewProcessPage() {
                 </div>
 
                 {/* Review Summary */}
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-5 mt-4">
+                <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-5">
                   <div className="flex items-start gap-3">
-                    <FiSettings className="h-5 w-5 text-amber-600 mt-0.5" />
+                    <FiSettings className="h-5 w-5 text-blue-700 mt-0.5" />
                     <div>
                       <p className="font-semibold text-gray-900">
                         Ready to Create?
                       </p>
                       <p className="text-sm text-gray-600 mt-1">
                         You`re about to create{" "}
-                        <strong className="text-amber-700">
+                        <strong className="text-blue-700">
                           {formData.name || "your process"}
                         </strong>{" "}
                         with
@@ -929,7 +1026,7 @@ export default function NewProcessPage() {
           <div className="flex space-x-3 justify-center">
             <Link
               href="/processes"
-              className="px-6 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all shadow-md"
+              className={primaryButtonClass}
             >
               View All Processes
             </Link>
@@ -944,6 +1041,8 @@ export default function NewProcessPage() {
                   name: "",
                   description: "",
                   category: "",
+                  priority: "High",
+                  estimatedDuration: "",
                   visibility: "private",
                   assignedTo: [],
                   steps: [
@@ -974,7 +1073,7 @@ export default function NewProcessPage() {
                   },
                 });
               }}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:border-amber-300 hover:text-amber-600 transition-all"
+              className={secondaryButtonClass}
             >
               Create Another Process
             </button>
@@ -985,7 +1084,7 @@ export default function NewProcessPage() {
   }
 
   return (
-    <div className="py-6">
+    <div className="-m-4 min-h-[calc(100vh-9rem)] bg-linear-to-br from-blue-50 via-sky-50 to-violet-50 p-4 sm:-m-6 sm:p-6">
       {/* Error Alert */}
       {error && (
         <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
@@ -1005,125 +1104,79 @@ export default function NewProcessPage() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4">
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
           <Link
             href="/processes"
-            className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+            className="inline-flex items-center text-sm font-semibold text-slate-600 transition hover:text-blue-700"
           >
-            <FiArrowLeft className="h-5 w-5 mr-2" />
+            <FiArrowLeft className="mr-2 h-4 w-4" />
             Back to Processes
           </Link>
-          <div className="h-8 w-px bg-gray-300"></div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-              Create New Process
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Build your workflow step by step
-            </p>
-          </div>
         </div>
+
+        <div className="text-center md:absolute md:left-1/2 md:-translate-x-1/2">
+          <h1 className="text-2xl font-black text-slate-950">
+            Create New Process
+          </h1>
+          <p className="mt-1 text-xs font-medium text-slate-500">
+            Configure your high-fidelity enterprise workflow.
+          </p>
+        </div>
+
         <button
           type="button"
           onClick={() => setShowPreview(!showPreview)}
-          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:border-amber-300 hover:text-amber-600 transition-all flex items-center gap-2"
+          className={secondaryButtonClass}
         >
           <FiEye className="h-4 w-4" />
           {showPreview ? "Hide Preview" : "Show Preview"}
         </button>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
+      <ProcessStepper
+        steps={steps}
+        activeStep={activeStep}
+        onStepClick={(stepNumber) =>
+          stepNumber < activeStep && setActiveStep(stepNumber)
+        }
+      />
+
+      <div className="grid gap-8 lg:grid-cols-3">
         {/* Main Form */}
         <div className={`${showPreview ? "lg:col-span-2" : "lg:col-span-3"}`}>
-          <div className="bg-white rounded-2xl border border-amber-100 shadow-sm overflow-hidden">
-            {/* Progress Bar */}
-            <div className="px-6 py-4 border-b border-amber-100 bg-gradient-to-r from-gray-50 to-white">
-              <div className="flex justify-between items-center mb-2">
-                <div className="text-sm font-medium text-gray-900">
-                  Step {activeStep} of {steps.length}:{" "}
-                  {steps.find((s) => s.number === activeStep)?.title}
-                </div>
-                <div className="text-sm text-gray-500">
-                  {steps.find((s) => s.number === activeStep)?.description}
-                </div>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-gradient-to-r from-amber-500 to-amber-600 h-2 rounded-full transition-all duration-500"
-                  style={{
-                    width: `${((activeStep - 1) / (steps.length - 1)) * 100}%`,
-                  }}
-                ></div>
-              </div>
-            </div>
-
-            {/* Step Indicators */}
-            <div className="px-6 py-4 border-b border-amber-100 bg-white">
-              <div className="flex justify-between">
-                {steps.map((step) => (
-                  <div key={step.number} className="flex flex-col items-center">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 cursor-pointer transition-all ${
-                        step.number === activeStep
-                          ? "bg-amber-500 text-white shadow-md"
-                          : step.number < activeStep
-                            ? "bg-amber-100 text-amber-600 hover:bg-amber-200"
-                            : "bg-gray-100 text-gray-400 hover:bg-gray-200"
-                      }`}
-                      onClick={() =>
-                        step.number < activeStep && setActiveStep(step.number)
-                      }
-                    >
-                      {step.number < activeStep ? (
-                        <FiCheck className="w-5 h-5" />
-                      ) : (
-                        step.number
-                      )}
-                    </div>
-                    <span
-                      className={`text-xs font-medium ${
-                        step.number === activeStep
-                          ? "text-amber-600"
-                          : "text-gray-500"
-                      }`}
-                    >
-                      {step.title}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Form Content */}
-            <div className="p-6">
+          <div className="mx-auto max-w-5xl overflow-hidden rounded-xl border border-white/70 bg-white/90 shadow-[0_18px_45px_rgba(37,99,235,0.08)]">
+            <div className="p-8">
               <form>
                 {renderStepContent()}
 
                 {/* Navigation Buttons */}
-                <div className="mt-8 pt-6 border-t border-gray-200 flex justify-between">
-                  <button
-                    type="button"
-                    onClick={handleBack}
-                    disabled={activeStep === 1}
-                    className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
-                      activeStep === 1
-                        ? "text-gray-400 cursor-not-allowed"
-                        : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"
-                    }`}
-                  >
-                    <FiChevronLeft className="w-4 h-4" />
-                    Previous
-                  </button>
+                <div className="mt-8 flex items-center justify-between border-t border-slate-200 pt-6">
+                  {activeStep === 1 ? (
+                    <Link
+                      href="/processes"
+                      className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950"
+                    >
+                      <span className="text-lg leading-none">x</span>
+                      Cancel
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleBack}
+                      className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950"
+                    >
+                      <FiChevronLeft className="w-4 h-4" />
+                      Previous
+                    </button>
+                  )}
 
                   {activeStep === steps.length ? (
                     <button
                       type="button"
                       onClick={handleSubmit}
                       disabled={isSubmitting}
-                      className="flex items-center gap-2 px-8 py-3 rounded-lg font-medium text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-500/25"
+                      className={primaryButtonClass}
                     >
                       {isSubmitting ? (
                         <>
@@ -1141,9 +1194,9 @@ export default function NewProcessPage() {
                     <button
                       type="button"
                       onClick={handleNext}
-                      className="flex items-center gap-2 px-8 py-3 rounded-lg font-medium text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all"
+                      className={primaryButtonClass}
                     >
-                      Next Step
+                      Save & Continue
                       <FiChevronRight className="w-4 h-4" />
                     </button>
                   )}
@@ -1156,105 +1209,105 @@ export default function NewProcessPage() {
         {/* Preview Sidebar */}
         {showPreview && (
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl border border-amber-100 shadow-sm sticky top-24">
-              <div className="px-5 py-4 border-b border-amber-100 bg-gradient-to-r from-amber-50 to-white">
-                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <FiEye className="h-5 w-5 text-amber-500" />
+            <div className="sticky top-24 overflow-hidden rounded-xl border border-white/70 bg-white/90 shadow-[0_18px_45px_rgba(37,99,235,0.08)]">
+              <div className="border-b border-slate-200 bg-blue-50/70 px-5 py-4">
+                <h2 className="flex items-center gap-2 text-base font-black text-slate-950">
+                  <FiEye className="h-4 w-4 text-blue-700" />
                   Live Preview
                 </h2>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="mt-1 text-xs font-medium text-slate-500">
                   See how your process will look
                 </p>
               </div>
               <div className="p-5 space-y-5">
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-3 text-sm uppercase tracking-wide">
+                  <h3 className="mb-3 text-xs font-black uppercase text-slate-900">
                     Basic Info
                   </h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Name:</span>
-                      <span className="font-medium text-gray-900 truncate max-w-[180px]">
+                      <span className="text-slate-500">Name:</span>
+                      <span className="max-w-[180px] truncate font-bold text-slate-900">
                         {formData.name || "Not set"}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Category:</span>
-                      <span className="font-medium text-gray-900">
+                      <span className="text-slate-500">Category:</span>
+                      <span className="font-bold text-slate-900">
                         {formData.category || "Not set"}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Visibility:</span>
-                      <span className="font-medium capitalize text-gray-900">
+                      <span className="text-slate-500">Visibility:</span>
+                      <span className="font-bold capitalize text-slate-900">
                         {formData.visibility}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-gray-200">
-                  <h3 className="font-medium text-gray-900 mb-3 text-sm uppercase tracking-wide">
+                <div className="border-t border-slate-200 pt-3">
+                  <h3 className="mb-3 text-xs font-black uppercase text-slate-900">
                     Workflow
                   </h3>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Total Steps:</span>
-                      <span className="font-medium text-gray-900">
+                      <span className="text-slate-500">Total Steps:</span>
+                      <span className="font-bold text-slate-900">
                         {formData.steps.length}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Assigned Members:</span>
-                      <span className="font-medium text-gray-900">
+                      <span className="text-slate-500">Assigned Members:</span>
+                      <span className="font-bold text-slate-900">
                         {formData.assignedTo.length}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-gray-200">
-                  <h3 className="font-medium text-gray-900 mb-3 text-sm uppercase tracking-wide">
+                <div className="border-t border-slate-200 pt-3">
+                  <h3 className="mb-3 text-xs font-black uppercase text-slate-900">
                     Steps Preview
                   </h3>
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     {formData.steps.slice(0, 4).map((step) => (
                       <div
                         key={step.id}
-                        className="flex items-center gap-2 text-sm p-2 bg-gray-50 rounded-lg"
+                        className="flex items-center gap-2 rounded-lg bg-slate-50 p-2 text-sm"
                       >
-                        <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs font-bold">
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
                           {step.order}
                         </div>
-                        <span className="text-gray-700 flex-1 truncate">
+                        <span className="flex-1 truncate text-slate-700">
                           {step.title}
                         </span>
-                        <FiClock className="h-3 w-3 text-gray-400" />
-                        <span className="text-xs text-gray-500">
+                        <FiClock className="h-3 w-3 text-slate-400" />
+                        <span className="text-xs text-slate-500">
                           {step.timeEstimate}
                         </span>
                       </div>
                     ))}
                     {formData.steps.length > 4 && (
-                      <p className="text-xs text-center text-gray-500 mt-2">
+                      <p className="mt-2 text-center text-xs text-slate-500">
                         +{formData.steps.length - 4} more steps
                       </p>
                     )}
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-gray-200">
-                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4">
+                <div className="border-t border-slate-200 pt-3">
+                  <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <FiZap className="h-5 w-5 text-amber-600" />
-                      <p className="text-sm font-semibold text-gray-900">
+                      <FiZap className="h-5 w-5 text-blue-700" />
+                      <p className="text-sm font-bold text-slate-900">
                         AI Ready
                       </p>
                     </div>
-                    <p className="text-xs text-gray-600">
+                    <p className="text-xs text-slate-600">
                       After creation, AI will analyze your workflow and suggest:
                     </p>
-                    <ul className="text-xs text-gray-600 mt-2 space-y-1 list-disc list-inside">
+                    <ul className="mt-2 list-inside list-disc space-y-1 text-xs text-slate-600">
                       <li>Optimization opportunities</li>
                       <li>Automation suggestions</li>
                       <li>Bottleneck detection</li>
@@ -1272,11 +1325,11 @@ export default function NewProcessPage() {
       {showSaveModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/55 backdrop-blur-sm shadow-inner" onClick={() => !saveProgress && setShowSaveModal(false)}></div>
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-5 flex items-center justify-between">
+          <div className="relative w-full max-w-xl overflow-hidden rounded-xl bg-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between bg-blue-700 px-6 py-5">
               <div>
                 <h2 className="text-white font-bold text-xl">Save Options</h2>
-                <p className="text-amber-100 text-sm mt-1">How would you like to save this configuration?</p>
+                <p className="mt-1 text-sm text-blue-100">How would you like to save this configuration?</p>
               </div>
               <button 
                 onClick={() => !saveProgress && setShowSaveModal(false)}
@@ -1296,12 +1349,12 @@ export default function NewProcessPage() {
 
               <div className="space-y-4">
                 {/* Option 1: Active Process */}
-                <label className={`block relative border-2 rounded-xl p-5 cursor-pointer transition-all ${saveOptions.process ? 'border-amber-500 bg-amber-50' : 'border-gray-200 hover:border-amber-300'}`}>
+                <label className={`relative block cursor-pointer rounded-xl border-2 p-5 transition-all ${saveOptions.process ? 'border-blue-700 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}>
                   <div className="flex items-start">
                     <div className="flex items-center h-5">
                       <input 
                         type="checkbox" 
-                        className="h-5 w-5 rounded border-gray-300 text-amber-600 focus:ring-amber-500" 
+                        className="h-5 w-5 rounded border-gray-300 text-blue-700 focus:ring-blue-500" 
                         checked={saveOptions.process}
                         onChange={(e) => setSaveOptions({...saveOptions, process: e.target.checked})}
                         disabled={saveProgress}
@@ -1309,8 +1362,8 @@ export default function NewProcessPage() {
                     </div>
                     <div className="ml-4">
                       <div className="flex items-center gap-2">
-                        <FiLayers className={`h-5 w-5 ${saveOptions.process ? 'text-amber-600' : 'text-gray-400'}`} />
-                        <span className={`block text-lg font-semibold ${saveOptions.process ? 'text-amber-900' : 'text-gray-900'}`}>
+                        <FiLayers className={`h-5 w-5 ${saveOptions.process ? 'text-blue-700' : 'text-gray-400'}`} />
+                        <span className={`block text-lg font-semibold ${saveOptions.process ? 'text-blue-950' : 'text-gray-900'}`}>
                           Save as Active Process
                         </span>
                       </div>
@@ -1322,12 +1375,12 @@ export default function NewProcessPage() {
                 </label>
 
                 {/* Option 2: Reusable Template */}
-                <label className={`block relative border-2 rounded-xl p-5 cursor-pointer transition-all ${saveOptions.template ? 'border-amber-500 bg-amber-50' : 'border-gray-200 hover:border-amber-300'}`}>
+                <label className={`relative block cursor-pointer rounded-xl border-2 p-5 transition-all ${saveOptions.template ? 'border-blue-700 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}>
                   <div className="flex items-start">
                     <div className="flex items-center h-5">
                       <input 
                         type="checkbox" 
-                        className="h-5 w-5 rounded border-gray-300 text-amber-600 focus:ring-amber-500" 
+                        className="h-5 w-5 rounded border-gray-300 text-blue-700 focus:ring-blue-500" 
                         checked={saveOptions.template}
                         onChange={(e) => setSaveOptions({...saveOptions, template: e.target.checked})}
                         disabled={saveProgress}
@@ -1335,13 +1388,13 @@ export default function NewProcessPage() {
                     </div>
                     <div className="ml-4">
                       <div className="flex items-center gap-2">
-                        <FiCopy className={`h-5 w-5 ${saveOptions.template ? 'text-amber-600' : 'text-gray-400'}`} />
-                        <span className={`block text-lg font-semibold ${saveOptions.template ? 'text-amber-900' : 'text-gray-900'}`}>
+                        <FiCopy className={`h-5 w-5 ${saveOptions.template ? 'text-blue-700' : 'text-gray-400'}`} />
+                        <span className={`block text-lg font-semibold ${saveOptions.template ? 'text-blue-950' : 'text-gray-900'}`}>
                           Save as Reusable Template
                         </span>
                       </div>
                       <span className="block text-sm text-gray-500 mt-1">
-                        Adds this framework to the Templates library. It won't notify assignees, but serves as a blueprint for future processes.
+                        Adds this framework to the Templates library. It does not notify assignees, but serves as a blueprint for future processes.
                       </span>
                     </div>
                   </div>
@@ -1361,7 +1414,7 @@ export default function NewProcessPage() {
                   type="button"
                   onClick={executeSave}
                   disabled={saveProgress || (!saveOptions.process && !saveOptions.template)}
-                  className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-medium hover:from-amber-600 hover:to-amber-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 disabled:opacity-50 disabled:shadow-none"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 py-3 font-medium text-white shadow-lg shadow-blue-700/20 transition-all hover:bg-blue-800 disabled:opacity-50 disabled:shadow-none"
                 >
                   {saveProgress ? (
                     <>

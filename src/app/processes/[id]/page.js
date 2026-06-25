@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { processAPI } from "../../api/processAPI";
@@ -83,7 +83,7 @@ function SortableItem({
     >
       <div className="relative z-10">
         <div
-          className={`w-12 h-12 rounded-full flex items-center justify-center shadow-md cursor-pointer transition-all hover:scale-105 ${activity.status === "completed" ? "bg-green-500" : activity.status === "in-progress" ? "bg-blue-500" : "bg-gray-300"}`}
+          className={`w-12 h-12 rounded-full flex items-center justify-center shadow-md cursor-pointer transition-all hover:scale-105 ${activity.status === "completed" ? "bg-emerald-500" : activity.status === "in-progress" || activity.status === "inprogress" ? "bg-cyan-600" : "bg-slate-300"}`}
           onClick={() => onClick(activity)}
         >
           {activity.status === "completed" ? (
@@ -96,7 +96,7 @@ function SortableItem({
         </div>
       </div>
       <div
-        className="flex-1 bg-white border border-gray-200 rounded-xl p-4 cursor-pointer hover:shadow-md transition-all hover:border-amber-200"
+        className="flex-1 bg-white border border-slate-200 rounded-xl p-4 cursor-pointer hover:shadow-md transition-all hover:border-cyan-200"
         onClick={() => onClick(activity)}
       >
         <div className="flex items-start justify-between mb-2">
@@ -109,7 +109,7 @@ function SortableItem({
                 {getStatusText(activity.status)}
               </span>
               {activity.automation && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 flex items-center gap-1">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-700 flex items-center gap-1">
                   <FiZap className="h-3 w-3" />
                   AI Auto
                 </span>
@@ -125,10 +125,10 @@ function SortableItem({
               title="Drag to reorder"
             >
               <div className="flex flex-col space-y-0.5">
-                <RxDragHandleDots1 className="h-6 w-6 text-gray-400 hover:text-amber-500" />
+                <RxDragHandleDots1 className="h-6 w-6 text-gray-400 hover:text-cyan-600" />
               </div>
             </button>
-            <FiEye className="h-5 w-5 text-gray-400 hover:text-amber-500" />
+            <FiEye className="h-5 w-5 text-gray-400 hover:text-cyan-600" />
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-gray-100">
@@ -220,7 +220,7 @@ export default function ProcessDetailPage() {
     }
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = useCallback((dateString) => {
     if (!dateString) return "Never";
     const date = new Date(dateString);
     const now = new Date();
@@ -232,24 +232,24 @@ export default function ProcessDetailPage() {
     if (diffDays < 7) return `${diffDays} days ago`;
     if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
     return `${Math.floor(diffDays / 30)} months ago`;
-  };
+  }, []);
 
-  const getCategoryColor = (category) => {
+  const getCategoryColor = useCallback((category) => {
     const colors = {
-      Onboarding: "bg-blue-500",
-      HR: "bg-purple-500",
-      Finance: "bg-green-500",
-      IT: "bg-amber-500",
-      Marketing: "bg-pink-500",
+      Onboarding: "bg-cyan-600",
+      HR: "bg-violet-500",
+      Finance: "bg-emerald-500",
+      IT: "bg-sky-600",
+      Marketing: "bg-rose-500",
       Sales: "bg-indigo-500",
-      Operations: "bg-cyan-500",
+      Operations: "bg-teal-600",
       "Customer Support": "bg-red-500",
       Legal: "bg-slate-500",
     };
     return colors[category] || "bg-gray-500";
-  };
+  }, []);
 
-  const transformProcessData = (apiData, users = []) => {
+  const transformProcessData = useCallback((apiData, users = []) => {
     if (!apiData) return null;
 
     const activities = (apiData.steps || []).map((step, index) => {
@@ -361,7 +361,7 @@ export default function ProcessDetailPage() {
       documents: apiData.settings?.documents || [],
       changeLog: apiData.settings?.changeLog || [],
     };
-  };
+  }, [formatDate, getCategoryColor]);
 
   // Fetch process data from API
   useEffect(() => {
@@ -404,7 +404,7 @@ export default function ProcessDetailPage() {
     };
 
     fetchData();
-  }, [id]);
+  }, [id, transformProcessData]);
 
   const toggleSection = (section) => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
@@ -423,13 +423,15 @@ export default function ProcessDetailPage() {
   const getStatusColor = (status) => {
     switch (status) {
       case "completed":
-        return "bg-green-100 text-green-800";
+        return "bg-emerald-100 text-emerald-800";
       case "in-progress":
-        return "bg-blue-100 text-blue-800";
+      case "inprogress":
+        return "bg-cyan-100 text-cyan-800";
       case "pending":
-        return "bg-yellow-100 text-yellow-800";
+      case "draft":
+        return "bg-amber-100 text-amber-800";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-slate-100 text-slate-800";
     }
   };
 
@@ -450,7 +452,7 @@ export default function ProcessDetailPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading process details...</p>
         </div>
       </div>
@@ -473,7 +475,7 @@ export default function ProcessDetailPage() {
         </p>
         <Link
           href="/processes"
-          className="text-amber-500 hover:underline font-medium"
+          className="text-cyan-700 hover:underline font-medium"
         >
           Back to Processes
         </Link>
@@ -482,7 +484,7 @@ export default function ProcessDetailPage() {
   }
 
   return (
-    <div className="py-6">
+    <div className="-m-4 min-h-[calc(100vh-9rem)] bg-linear-to-br from-slate-50 via-cyan-50 to-emerald-50 p-4 sm:-m-6 sm:p-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div className="flex items-center">
@@ -508,16 +510,16 @@ export default function ProcessDetailPage() {
                   <span
                     className={`px-3 py-1 text-sm rounded-full font-medium ${
                       process.status === "completed"
-                        ? "bg-green-100 text-green-800"
+                        ? "bg-emerald-100 text-emerald-800"
                         : process.status === "inprogress"
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-yellow-100 text-yellow-800"
+                          ? "bg-cyan-100 text-cyan-800"
+                          : "bg-amber-100 text-amber-800"
                     }`}
                   >
                     {process.status}
                   </span>
                   {process.category && (
-                    <span className="px-3 py-1 bg-amber-100 text-amber-700 text-sm rounded-full font-medium flex items-center gap-1">
+                    <span className="px-3 py-1 bg-teal-100 text-teal-700 text-sm rounded-full font-medium flex items-center gap-1">
                       <FiTag className="h-3.5 w-3.5" />
                       {process.category}
                     </span>
@@ -533,7 +535,7 @@ export default function ProcessDetailPage() {
         <div className="flex items-center gap-3">
           <Link
             href={`/processes/${process.id}/edit`}
-            className="px-5 py-2.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all flex items-center gap-2 shadow-md hover:shadow-lg"
+            className="px-5 py-2.5 bg-cyan-700 text-white rounded-lg hover:bg-cyan-800 transition-all flex items-center gap-2 shadow-md shadow-cyan-700/20 hover:shadow-lg"
           >
             <FiEdit2 className="h-4 w-4" />
             Edit Process
@@ -544,9 +546,9 @@ export default function ProcessDetailPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {/* Assigned Members */}
-        <div className="bg-white rounded-xl border border-amber-100 p-4 shadow-sm">
+        <div className="bg-white/90 rounded-xl border border-cyan-100 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <FiUsers className="h-5 w-5 text-amber-500" />
+            <FiUsers className="h-5 w-5 text-cyan-700" />
             <span className="text-xs text-gray-400">Assigned</span>
           </div>
           {process.assignees?.length ? (
@@ -561,17 +563,17 @@ export default function ProcessDetailPage() {
             </>
           )}
         </div>
-        <div className="bg-white rounded-xl border border-amber-100 p-4 shadow-sm">
+        <div className="bg-white/90 rounded-xl border border-cyan-100 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <FiLayers className="h-5 w-5 text-amber-500" />
+            <FiLayers className="h-5 w-5 text-teal-700" />
             <span className="text-xs text-gray-400">Steps</span>
           </div>
           <p className="text-2xl font-bold text-gray-900">{process.steps}</p>
           <p className="text-xs text-gray-500 mt-1">Total Activities</p>
         </div>
-        <div className="bg-white rounded-xl border border-amber-100 p-4 shadow-sm">
+        <div className="bg-white/90 rounded-xl border border-cyan-100 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <FiClock className="h-5 w-5 text-amber-500" />
+            <FiClock className="h-5 w-5 text-emerald-700" />
             <span className="text-xs text-gray-400">Progress</span>
           </div>
           <p className="text-2xl font-bold text-gray-900">
@@ -579,14 +581,14 @@ export default function ProcessDetailPage() {
           </p>
           <div className="h-1.5 bg-gray-200 rounded-full mt-2">
             <div
-              className="h-full bg-amber-500 rounded-full"
+              className="h-full bg-emerald-500 rounded-full"
               style={{ width: `${process.completion}%` }}
             ></div>
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-amber-100 p-4 shadow-sm">
+        <div className="bg-white/90 rounded-xl border border-cyan-100 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <FiCalendar className="h-5 w-5 text-amber-500" />
+            <FiCalendar className="h-5 w-5 text-slate-600" />
             <span className="text-xs text-gray-400">Updated</span>
           </div>
           <p className="text-lg font-bold text-gray-900">
@@ -597,19 +599,19 @@ export default function ProcessDetailPage() {
       </div>
 
       {/* Control Bar */}
-      <div className="bg-white rounded-xl border border-amber-100 shadow-sm mb-6 p-4">
+      <div className="bg-white/90 rounded-xl border border-cyan-100 shadow-sm mb-6 p-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setViewMode("timeline")}
-                className={`px-3 py-1.5 rounded-md text-sm transition-all ${viewMode === "timeline" ? "bg-amber-500 text-white shadow-sm" : "text-gray-600 hover:bg-gray-200"}`}
+                className={`px-3 py-1.5 rounded-md text-sm transition-all ${viewMode === "timeline" ? "bg-cyan-700 text-white shadow-sm" : "text-gray-600 hover:bg-gray-200"}`}
               >
                 Timeline
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className={`px-3 py-1.5 rounded-md text-sm transition-all ${viewMode === "list" ? "bg-amber-500 text-white shadow-sm" : "text-gray-600 hover:bg-gray-200"}`}
+                className={`px-3 py-1.5 rounded-md text-sm transition-all ${viewMode === "list" ? "bg-cyan-700 text-white shadow-sm" : "text-gray-600 hover:bg-gray-200"}`}
               >
                 List View
               </button>
@@ -618,14 +620,14 @@ export default function ProcessDetailPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowTimeframe(!showTimeframe)}
-                className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-all ${showTimeframe ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-all ${showTimeframe ? "bg-cyan-100 text-cyan-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
               >
                 <FiDollarSign className="h-4 w-4" />
                 Show Costs
               </button>
               <button
                 onClick={() => setShowTags(!showTags)}
-                className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-all ${showTags ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-all ${showTags ? "bg-cyan-100 text-cyan-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
               >
                 <FiTag className="h-4 w-4" />
                 Show Tags
@@ -657,13 +659,13 @@ export default function ProcessDetailPage() {
             </div>
             <div className="h-6 w-px bg-gray-300"></div>
             <button
-              className="p-2 text-gray-400 hover:text-amber-600 transition-colors"
+              className="p-2 text-gray-400 hover:text-cyan-700 transition-colors"
               title="Download Map"
             >
               <FiDownload className="h-5 w-5" />
             </button>
             <button
-              className="p-2 text-gray-400 hover:text-amber-600 transition-colors"
+              className="p-2 text-gray-400 hover:text-cyan-700 transition-colors"
               title="Copy Process"
             >
               <FiCopy className="h-5 w-5" />
@@ -676,8 +678,8 @@ export default function ProcessDetailPage() {
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Left: Activities */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl border border-amber-100 shadow-sm overflow-hidden">
-            <div className="border-b border-gray-200 px-6 py-4 bg-gradient-to-r from-gray-50 to-white">
+          <div className="bg-white/90 rounded-xl border border-cyan-100 shadow-sm overflow-hidden">
+            <div className="border-b border-slate-200 px-6 py-4 bg-gradient-to-r from-slate-50 to-white">
               <h2 className="text-lg font-semibold text-gray-900">
                 Process Activities
               </h2>
@@ -704,7 +706,7 @@ export default function ProcessDetailPage() {
                     strategy={verticalListSortingStrategy}
                   >
                     <div className="relative">
-                      <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+                      <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-slate-200"></div>
                       <div className="space-y-6">
                         {process.activities.map((activity) => (
                           <SortableItem
@@ -727,13 +729,13 @@ export default function ProcessDetailPage() {
                   {process.activities.map((activity) => (
                     <div
                       key={activity.id}
-                      className="bg-white border border-gray-200 rounded-xl p-4 cursor-pointer hover:shadow-md transition-all hover:border-amber-200"
+                      className="bg-white border border-slate-200 rounded-xl p-4 cursor-pointer hover:shadow-md transition-all hover:border-cyan-200"
                       onClick={() => setSelectedActivity(activity)}
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <div
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center ${activity.status === "completed" ? "bg-green-100" : activity.status === "in-progress" ? "bg-blue-100" : "bg-gray-100"}`}
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center ${activity.status === "completed" ? "bg-emerald-100" : activity.status === "in-progress" || activity.status === "inprogress" ? "bg-cyan-100" : "bg-slate-100"}`}
                           >
                             <span className="text-xs font-semibold">
                               {activity.id}
@@ -744,7 +746,7 @@ export default function ProcessDetailPage() {
                           </h3>
                         </div>
                         {activity.automation && (
-                          <FiZap className="h-4 w-4 text-blue-500" />
+                          <FiZap className="h-4 w-4 text-cyan-600" />
                         )}
                       </div>
                       <p className="text-sm text-gray-600 mb-3 line-clamp-2">
@@ -778,13 +780,13 @@ export default function ProcessDetailPage() {
         {/* Right: Process Attributes */}
         <div className="space-y-4">
           {/* Summary Section */}
-          <div className="bg-white rounded-xl border border-amber-100 shadow-sm overflow-hidden">
+          <div className="bg-white/90 rounded-xl border border-cyan-100 shadow-sm overflow-hidden">
             <button
               onClick={() => toggleSection("summary")}
               className="w-full px-5 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
             >
               <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                <FiInfo className="h-5 w-5 text-amber-500" />
+                <FiInfo className="h-5 w-5 text-cyan-700" />
                 Summary
               </h3>
               {expandedSections.summary ? <FiChevronUp /> : <FiChevronDown />}
@@ -880,7 +882,7 @@ export default function ProcessDetailPage() {
           </div>
 
           {/* Change Log */}
-          <div className="bg-white rounded-xl border border-amber-100 shadow-sm overflow-hidden">
+          <div className="bg-white/90 rounded-xl border border-cyan-100 shadow-sm overflow-hidden">
             <button
               onClick={() => toggleSection("changeLog")}
               className="w-full px-5 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
@@ -891,7 +893,7 @@ export default function ProcessDetailPage() {
             {expandedSections.changeLog && (
               <div className="px-5 pb-4 space-y-3">
                 {process.changeLog.map((log, idx) => (
-                  <div key={idx} className="border-l-2 border-amber-500 pl-3">
+                  <div key={idx} className="border-l-2 border-cyan-600 pl-3">
                     <p className="text-sm font-medium text-gray-900">
                       {log.status}
                     </p>
@@ -908,13 +910,13 @@ export default function ProcessDetailPage() {
           </div>
 
           {/* Documents */}
-          <div className="bg-white rounded-xl border border-amber-100 shadow-sm overflow-hidden">
+          <div className="bg-white/90 rounded-xl border border-cyan-100 shadow-sm overflow-hidden">
             <button
               onClick={() => toggleSection("documents")}
               className="w-full px-5 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
             >
               <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                <FiFileText className="h-5 w-5 text-amber-500" />
+                <FiFileText className="h-5 w-5 text-cyan-700" />
                 Documents ({process.documents.length})
               </h3>
               {expandedSections.documents ? <FiChevronUp /> : <FiChevronDown />}
@@ -934,7 +936,7 @@ export default function ProcessDetailPage() {
                         {doc.type} • {doc.size} • {doc.date}
                       </p>
                     </div>
-                    <button className="text-amber-500 hover:text-amber-600 text-sm flex items-center gap-1">
+                    <button className="text-cyan-700 hover:text-cyan-800 text-sm flex items-center gap-1">
                       <FiEye className="h-4 w-4" />
                       View
                     </button>
@@ -945,13 +947,13 @@ export default function ProcessDetailPage() {
           </div>
 
           {/* Cycle Costs */}
-          <div className="bg-white rounded-xl border border-amber-100 shadow-sm overflow-hidden">
+          <div className="bg-white/90 rounded-xl border border-cyan-100 shadow-sm overflow-hidden">
             <button
               onClick={() => toggleSection("costs")}
               className="w-full px-5 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
             >
               <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                <FiDollarSign className="h-5 w-5 text-green-500" />
+                <FiDollarSign className="h-5 w-5 text-emerald-600" />
                 Cycle Costs
               </h3>
               {expandedSections.costs ? <FiChevronUp /> : <FiChevronDown />}
@@ -983,7 +985,7 @@ export default function ProcessDetailPage() {
           </div>
 
           {/* Systems & Tags */}
-          <div className="bg-white rounded-xl border border-amber-100 shadow-sm overflow-hidden">
+          <div className="bg-white/90 rounded-xl border border-cyan-100 shadow-sm overflow-hidden">
             <button
               onClick={() => toggleSection("systems")}
               className="w-full px-5 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
@@ -1001,7 +1003,7 @@ export default function ProcessDetailPage() {
                     {process.systems.map((system) => (
                       <span
                         key={system}
-                        className="px-3 py-1.5 bg-blue-50 text-blue-700 text-sm rounded-lg flex items-center gap-1"
+                        className="px-3 py-1.5 bg-cyan-50 text-cyan-700 text-sm rounded-lg flex items-center gap-1"
                       >
                         <FiLink className="h-3 w-3" />
                         {system}
@@ -1015,7 +1017,7 @@ export default function ProcessDetailPage() {
                     {process.leanTags.map((tag) => (
                       <span
                         key={tag}
-                        className="px-3 py-1.5 bg-amber-50 text-amber-700 text-sm rounded-lg"
+                        className="px-3 py-1.5 bg-teal-50 text-teal-700 text-sm rounded-lg"
                       >
                         {tag}
                       </span>
@@ -1075,8 +1077,8 @@ export default function ProcessDetailPage() {
                     Assigned To
                   </label>
                   <div className="flex items-center gap-2 mt-1">
-                    <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
-                      <span className="text-xs font-semibold text-amber-600">
+                    <div className="w-8 h-8 rounded-full bg-cyan-100 flex items-center justify-center">
+                      <span className="text-xs font-semibold text-cyan-700">
                         {selectedActivity.assigneeAvatar ||
                           selectedActivity.assignee.charAt(0)}
                       </span>
@@ -1121,19 +1123,19 @@ export default function ProcessDetailPage() {
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                   FAQ / Help
                 </label>
-                <p className="text-gray-700 bg-blue-50 p-3 rounded-lg mt-1">
+                <p className="text-gray-700 bg-cyan-50 p-3 rounded-lg mt-1">
                   {selectedActivity.faq || "No FAQs available"}
                 </p>
               </div>
               {selectedActivity.automation && (
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4">
+                <div className="bg-gradient-to-r from-cyan-50 to-emerald-50 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <FiZap className="h-5 w-5 text-blue-600" />
-                    <p className="font-semibold text-blue-800">
+                    <FiZap className="h-5 w-5 text-cyan-700" />
+                    <p className="font-semibold text-cyan-900">
                       AI Automation Available
                     </p>
                   </div>
-                  <p className="text-sm text-blue-700">
+                  <p className="text-sm text-cyan-700">
                     This step can be automated using AI to reduce manual effort
                     by up to 80%.
                   </p>
@@ -1153,12 +1155,12 @@ export default function ProcessDetailPage() {
 
 function MiniAvatar({ name = "" }) {
   const palette = [
-    "bg-amber-500",
-    "bg-blue-500",
+    "bg-cyan-600",
+    "bg-teal-600",
     "bg-emerald-500",
     "bg-rose-500",
     "bg-indigo-500",
-    "bg-purple-500",
+    "bg-violet-500",
   ];
   let hash = 0;
   for (let i = 0; i < name.length; i++)

@@ -1,34 +1,71 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { processAPI } from "../../../api/processAPI";
-import { userAPI } from "../../../api/userAPI";
+import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-
-
 import {
+  FiAlertCircle,
+  FiArrowLeft,
+  FiBell,
+  FiCheck,
+  FiChevronLeft,
+  FiChevronRight,
+  FiClock,
+  FiEye,
+  FiHelpCircle,
   FiLayers,
   FiPlus,
-  FiArrowLeft,
   FiSave,
-  FiUsers,
-  FiClock,
-  FiAlertCircle,
-  FiCheck,
-  FiChevronRight,
-  FiChevronLeft,
+  FiSettings,
   FiTrash2,
-  FiHelpCircle,
+  FiUsers,
   FiZap,
-  FiUpload,
-  FiX,
-  FiEdit2,
-  FiEye,
-  FiCopy,
-  FiChevronDown,
 } from "react-icons/fi";
+import { processAPI } from "../../../api/processAPI";
+import { userAPI } from "../../../api/userAPI";
+
+const fieldClass =
+  "w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100";
+const labelClass = "mb-2 block text-xs font-semibold text-slate-700";
+const primaryButtonClass =
+  "inline-flex items-center justify-center gap-2 rounded-lg bg-blue-700 px-7 py-3 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(37,99,235,0.22)] transition hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-50";
+const secondaryButtonClass =
+  "inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50";
+
+const categories = [
+  "Onboarding",
+  "HR",
+  "Finance",
+  "IT",
+  "Marketing",
+  "Sales",
+  "Operations",
+  "Customer Support",
+  "Legal",
+];
+
+const stepsConfig = [
+  { number: 1, title: "Basic Info", description: "Process details" },
+  { number: 2, title: "Steps", description: "Define workflow steps" },
+  { number: 3, title: "Assignments", description: "Assign team members" },
+  { number: 4, title: "Settings", description: "Configure options" },
+];
+
+const emptyForm = {
+  name: "",
+  description: "",
+  category: "",
+  visibility: "private",
+  assignedTo: [],
+  steps: [],
+  notifications: { email: true, slack: false, inApp: true },
+  automation: {
+    autoAssign: false,
+    dueDateReminders: true,
+    escalation: false,
+  },
+};
 
 export default function EditProcessPage() {
   const router = useRouter();
@@ -40,61 +77,25 @@ export default function EditProcessPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [error,      setError]      = useState(null);
+  const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [workspaceUsers, setWorkspaceUsers] = useState([]);
-  const [loadingUsers,   setLoadingUsers]   = useState(true);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [formData, setFormData] = useState(emptyForm);
 
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    category: "",
-    visibility: "private",
-    assignedTo: [],
-    steps: [],
-    notifications: { email: true, slack: false, inApp: true },
-    automation: {
-      autoAssign: false,
-      dueDateReminders: true,
-      escalation: false,
-    },
-  });
-
-  const categories = [
-    "Onboarding",
-    "HR",
-    "Finance",
-    "IT",
-    "Marketing",
-    "Sales",
-    "Operations",
-    "Customer Support",
-    "Legal",
-  ];
-
-
-  const stepsConfig = [
-    { number: 1, title: "Basic Info", description: "Process details" },
-    { number: 2, title: "Steps", description: "Define workflow steps" },
-    { number: 3, title: "Assignments", description: "Assign team members" },
-    { number: 4, title: "Settings", description: "Configure options" },
-  ];
-
-  // ── Fetch Workspace Users ──────────────────────────────────────────────────
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setLoadingUsers(true);
         const result = await userAPI.getWorkspaceUsers({ limit: 100 });
-        if (result.success) {
-          setWorkspaceUsers(result.users || []);
-        }
+        if (result.success) setWorkspaceUsers(result.users || []);
       } catch (err) {
         console.error("Failed to fetch workspace users:", err);
       } finally {
         setLoadingUsers(false);
       }
     };
+
     fetchUsers();
   }, []);
 
@@ -109,81 +110,68 @@ export default function EditProcessPage() {
       try {
         setIsLoading(true);
         setError(null);
-
-        console.log(`[Edit] Loading process with ID: ${id}`);
         const result = await processAPI.getProcess(id);
 
-        console.log(`[Edit] API Result:`, result);
-
-        if (result.success) {
-          const process = result.data;
-          console.log("[Edit] Process data received:", process);
-
-          // Collect all unique assignee IDs from steps to ensure they are included in assignments
-          const stepAssigneeIds = Array.isArray(process.steps)
-            ? process.steps
-                .map(step => typeof step.assignee === 'object' ? step.assignee?._id : (step.assignee || ""))
-                .filter(id => !!id)
-            : [];
-
-          // Collect process-level assignees (handle both 'assignedTo' and 'assignees' field names)
-          // We use a Set to ensure unique IDs across both sources
-          const processAssigneeIds = Array.isArray(process.assignedTo || process.assignees)
-            ? (process.assignedTo || process.assignees).map((a) =>
-                typeof a === "string" ? a : a._id,
-              )
-            : [];
-
-          const combinedAssignees = [...new Set([...processAssigneeIds, ...stepAssigneeIds])];
-
-          const newFormData = {
-            name: process.name?.toString() || "",
-            description: process.description?.toString() || "",
-            category: process.category?.toString() || "",
-            visibility: process.visibility?.toString() || "private",
-            assignedTo: combinedAssignees,
-            steps: Array.isArray(process.steps)
-              ? process.steps.map((step, index) => {
-                  let status = step.status?.toString() || "draft";
-                  // API only accepts [draft, completed, inprogress]
-                  if (status === "pending") status = "draft";
-                  
-                  return {
-                    id: step._id || `step-${index}`,
-                    _id: step._id || null,
-                    title: step.title?.toString() || "",
-                    description: step.description?.toString() || "",
-                    timeEstimate: step.timeEstimate?.toString() || "1 hour",
-                    order: index + 1,
-                    notes: step.notes?.toString() || "",
-                    status: status,
-                    assignee: typeof step.assignee === 'object' ? (step.assignee?._id || "") : (step.assignee || ""),
-                  };
-                })
-              : [],
-            notifications: {
-              email: process.settings?.notifications?.email ?? true,
-              slack: process.settings?.notifications?.slack ?? false,
-              inApp: process.settings?.notifications?.inApp ?? true,
-            },
-            automation: {
-              autoAssign:
-                process.settings?.automation?.autoAssignTasks ?? false,
-              dueDateReminders:
-                process.settings?.automation?.dueDateReminders ?? true,
-              escalation:
-                process.settings?.automation?.escalateOverdueTasks ?? false,
-            },
-          };
-
-          console.log("[Edit] Setting formData to:", newFormData);
-          setFormData(newFormData);
-          console.log("[Edit] FormData set successfully");
-        } else {
-          const errorMsg = result.error || "Failed to load process";
-          setError(errorMsg);
-          console.error("[Edit] API Error:", errorMsg);
+        if (!result.success) {
+          setError(result.error || "Failed to load process");
+          return;
         }
+
+        const process = result.data;
+        const stepAssigneeIds = Array.isArray(process.steps)
+          ? process.steps
+              .map((step) =>
+                typeof step.assignee === "object"
+                  ? step.assignee?._id
+                  : step.assignee,
+              )
+              .filter(Boolean)
+          : [];
+        const processAssigneeIds = Array.isArray(process.assignedTo || process.assignees)
+          ? (process.assignedTo || process.assignees)
+              .map((assignee) =>
+                typeof assignee === "string" ? assignee : assignee?._id || assignee?.id,
+              )
+              .filter(Boolean)
+          : [];
+
+        setFormData({
+          name: process.name?.toString() || "",
+          description: process.description?.toString() || "",
+          category: process.category?.toString() || "",
+          visibility: process.visibility?.toString() || "private",
+          assignedTo: [...new Set([...processAssigneeIds, ...stepAssigneeIds])],
+          steps: Array.isArray(process.steps)
+            ? process.steps.map((step, index) => ({
+                id: step._id || step.id || `step-${index}`,
+                _id: step._id || null,
+                title: step.title?.toString() || "",
+                description: step.description?.toString() || "",
+                timeEstimate: step.timeEstimate?.toString() || "1 hour",
+                order: index + 1,
+                sequenceNo: step.sequenceNo || index + 1,
+                notes: step.notes?.toString() || "",
+                status:
+                  step.status === "pending"
+                    ? "draft"
+                    : step.status?.toString() || "draft",
+                assignee:
+                  typeof step.assignee === "object"
+                    ? step.assignee?._id || ""
+                    : step.assignee || "",
+              }))
+            : [],
+          notifications: {
+            email: process.settings?.notifications?.email ?? true,
+            slack: process.settings?.notifications?.slack ?? false,
+            inApp: process.settings?.notifications?.inApp ?? true,
+          },
+          automation: {
+            autoAssign: process.settings?.automation?.autoAssignTasks ?? false,
+            dueDateReminders: process.settings?.automation?.dueDateReminders ?? true,
+            escalation: process.settings?.automation?.escalateOverdueTasks ?? false,
+          },
+        });
       } catch (err) {
         console.error("[Edit] Unexpected error loading process:", err);
         setError("An unexpected error occurred. Please refresh the page.");
@@ -201,23 +189,15 @@ export default function EditProcessPage() {
 
   const handleStepChange = (stepId, field, value) => {
     setFormData((prev) => {
-      const updatedSteps = prev.steps.map((step) =>
+      const steps = prev.steps.map((step) =>
         step.id === stepId ? { ...step, [field]: value } : step,
       );
+      const assignedTo =
+        field === "assignee" && value && !prev.assignedTo.includes(value)
+          ? [...prev.assignedTo, value]
+          : prev.assignedTo;
 
-      // Senior-level approach: If an assignee is picked for a step,
-      // they should automatically be included in process-level assignments
-      // to ensure they have the necessary visibility.
-      let updatedAssignedTo = [...prev.assignedTo];
-      if (field === "assignee" && value && !updatedAssignedTo.includes(value)) {
-        updatedAssignedTo.push(value);
-      }
-
-      return {
-        ...prev,
-        steps: updatedSteps,
-        assignedTo: updatedAssignedTo,
-      };
+      return { ...prev, steps, assignedTo };
     });
   };
 
@@ -229,13 +209,14 @@ export default function EditProcessPage() {
         steps: [
           ...prev.steps,
           {
-            id: `step-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
+            id: `step-${Date.now()}`,
             _id: null,
             title: `Step ${nextOrder}`,
             description: "Describe this step...",
             assignee: "",
             timeEstimate: "1 hour",
             order: nextOrder,
+            sequenceNo: nextOrder,
             notes: "",
             status: "draft",
           },
@@ -247,70 +228,73 @@ export default function EditProcessPage() {
   const removeStep = (stepId) => {
     setFormData((prev) => {
       if (prev.steps.length <= 1) return prev;
-
-      const filtered = prev.steps.filter((step) => step.id !== stepId);
       return {
         ...prev,
-        steps: filtered.map((step, index) => ({
+        steps: prev.steps
+          .filter((step) => step.id !== stepId)
+          .map((step, index) => ({ ...step, order: index + 1, sequenceNo: index + 1 })),
+      };
+    });
+  };
+
+  const moveStep = (index, direction) => {
+    setFormData((prev) => {
+      const nextIndex = index + direction;
+      if (nextIndex < 0 || nextIndex >= prev.steps.length) return prev;
+
+      const steps = [...prev.steps];
+      [steps[index], steps[nextIndex]] = [steps[nextIndex], steps[index]];
+      return {
+        ...prev,
+        steps: steps.map((step, stepIndex) => ({
           ...step,
-          order: index + 1,
+          order: stepIndex + 1,
+          sequenceNo: stepIndex + 1,
         })),
       };
     });
   };
 
-  const moveStepUp = (index) => {
-    if (index > 0) {
-      setFormData((prev) => {
-        const newSteps = [...prev.steps];
-        [newSteps[index], newSteps[index - 1]] = [
-          newSteps[index - 1],
-          newSteps[index],
-        ];
-        return {
-          ...prev,
-          steps: newSteps.map((step, idx) => ({ ...step, order: idx + 1 })),
-        };
-      });
-    }
-  };
-
-  const moveStepDown = (index) => {
-    setFormData((prev) => {
-      if (index < prev.steps.length - 1) {
-        const newSteps = [...prev.steps];
-        [newSteps[index], newSteps[index + 1]] = [
-          newSteps[index + 1],
-          newSteps[index],
-        ];
-        return {
-          ...prev,
-          steps: newSteps.map((step, idx) => ({ ...step, order: idx + 1 })),
-        };
+  const validateStep = () => {
+    if (activeStep === 1) {
+      if (!formData.name.trim()) {
+        setError("Process name is required.");
+        return false;
       }
-      return prev;
-    });
+      if (!formData.category) {
+        setError("Please select a category.");
+        return false;
+      }
+    }
+
+    if (activeStep === 2 && formData.steps.some((step) => !step.title.trim())) {
+      setError("All steps must have a title.");
+      return false;
+    }
+
+    setError(null);
+    return true;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleNext = () => {
+    if (validateStep() && activeStep < stepsConfig.length) {
+      setActiveStep((current) => current + 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
-    if (activeStep !== stepsConfig.length) {
-      setError("Please complete all steps before submitting.");
-      return;
+  const handleBack = () => {
+    if (activeStep > 1) {
+      setActiveStep((current) => current - 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
+  };
 
-    // Validate required fields
-    if (!formData.name.trim()) {
-      setError("Process name is required.");
-      return;
-    }
-    if (!formData.category) {
-      setError("Please select a category.");
-      return;
-    }
-    if (formData.steps.some((step) => !step.title.trim())) {
-      setError("All steps must have a title.");
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (activeStep !== stepsConfig.length || !validateStep()) {
+      setError("Please complete all required information before saving.");
       return;
     }
 
@@ -322,24 +306,16 @@ export default function EditProcessPage() {
       const result = await processAPI.updateProcess(id, formData);
 
       if (result.success) {
-        setSuccessMessage(result.message);
+        setSuccessMessage(result.message || "Process updated successfully");
         setSuccess(true);
-        console.log("Process updated successfully:", result.data);
         toast.success("Process updated successfully");
-
-        setTimeout(() => {
-          router.push("/processes");
-        }, 2000);
+        window.setTimeout(() => router.push("/processes"), 1600);
       } else {
         setError(result.error || "Failed to update process. Please try again.");
-        console.error("Error updating process:", result.error);
         toast.error("Failed to update process");
       }
     } catch (err) {
-      const errorMessage =
-        err.message || "An unexpected error occurred. Please try again.";
-      setError(errorMessage);
-      console.error("Unexpected error:", err);
+      setError(err.message || "An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -350,159 +326,128 @@ export default function EditProcessPage() {
     setError(null);
 
     try {
-      console.log(`[Edit] Deleting process with ID: ${id}`);
       const result = await processAPI.deleteProcess(id);
-
       if (result.success) {
         setSuccessMessage("Process deleted successfully");
         setSuccess(true);
-        console.log("Process deleted successfully");
         toast.success("Process deleted successfully");
-
-        setTimeout(() => {
-          router.push("/processes");
-        }, 1500);
+        window.setTimeout(() => router.push("/processes"), 1200);
       } else {
         setError(result.error || "Failed to delete process. Please try again.");
-        console.error("Error deleting process:", result.error);
         toast.error("Failed to delete process");
         setShowDeleteModal(false);
       }
     } catch (err) {
-      const errorMessage =
-        err.message || "An unexpected error occurred. Please try again.";
-      setError(errorMessage);
-      console.error("Unexpected error deleting process:", err);
+      setError(err.message || "An unexpected error occurred. Please try again.");
       setShowDeleteModal(false);
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const validateStep = () => {
-    switch (activeStep) {
-      case 1:
-        return formData.name.trim() !== "" && formData.category !== "";
-      case 2:
-        return formData.steps.every((step) => step.title.trim() !== "");
-      default:
-        return true;
-    }
-  };
-
-  const handleNext = () => {
-    if (validateStep() && activeStep < stepsConfig.length) {
-      setActiveStep(activeStep + 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  };
-
-  const handleBack = () => {
-    if (activeStep > 1) {
-      setActiveStep(activeStep - 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
+  const toggleAssignment = (memberId) => {
+    setFormData((prev) => ({
+      ...prev,
+      assignedTo: prev.assignedTo.includes(memberId)
+        ? prev.assignedTo.filter((id) => id !== memberId)
+        : [...prev.assignedTo, memberId],
+    }));
   };
 
   const renderStepContent = () => {
-    console.log("Rendering step content with formData:", formData);
     switch (activeStep) {
       case 1:
         return (
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Process Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => handleInputChange("name", e.target.value)}
-                className="w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
-                placeholder="e.g., Employee Onboarding Process"
-              />
-            </div>
+          <div className="space-y-7">
+            <SectionIntro
+              icon={FiLayers}
+              title="Process Definition"
+              text="Review the core identity and access model for this workflow."
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) =>
-                  handleInputChange("description", e.target.value)
-                }
-                rows="4"
-                className="w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
-                placeholder="Describe what this process accomplishes..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category <span className="text-red-500">*</span>
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {categories.map((cat) => (
-                  <div
-                    key={cat}
-                    className={`border rounded-lg p-3 text-center cursor-pointer transition-all ${
-                      formData.category === cat
-                        ? "border-amber-500 bg-amber-50 shadow-sm"
-                        : "border-gray-300 hover:border-amber-300 hover:bg-amber-50/50"
-                    }`}
-                    onClick={() => handleInputChange("category", cat)}
-                  >
-                    <span className="text-sm font-medium text-gray-900">
-                      {cat}
-                    </span>
-                  </div>
-                ))}
+            <div className="grid gap-5 md:grid-cols-2">
+              <div>
+                <label className={labelClass}>
+                  Process Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(event) => handleInputChange("name", event.target.value)}
+                  className={fieldClass}
+                  placeholder="e.g. Q4 Financial Audit"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>
+                  Category <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.category}
+                  onChange={(event) => handleInputChange("category", event.target.value)}
+                  className={fieldClass}
+                >
+                  <option value="">Select category</option>
+                  {categories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Visibility
-              </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div
-                  className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                    formData.visibility === "private"
-                      ? "border-amber-500 bg-amber-50"
-                      : "border-gray-300 hover:border-amber-300"
-                  }`}
-                  onClick={() => handleInputChange("visibility", "private")}
-                >
-                  <div className="flex items-center mb-2">
-                    <div
-                      className={`h-3 w-3 rounded-full mr-2 ${formData.visibility === "private" ? "bg-amber-500" : "bg-gray-300"}`}
-                    ></div>
-                    <span className="font-medium text-gray-900">Private</span>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    Only assigned team members can view
-                  </p>
-                </div>
+              <label className={labelClass}>Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(event) => handleInputChange("description", event.target.value)}
+                rows="5"
+                className={fieldClass}
+                placeholder="Describe the goals and impact of this process..."
+              />
+            </div>
 
-                <div
-                  className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                    formData.visibility === "public"
-                      ? "border-amber-500 bg-amber-50"
-                      : "border-gray-300 hover:border-amber-300"
-                  }`}
-                  onClick={() => handleInputChange("visibility", "public")}
-                >
-                  <div className="flex items-center mb-2">
-                    <div
-                      className={`h-3 w-3 rounded-full mr-2 ${formData.visibility === "public" ? "bg-amber-500" : "bg-gray-300"}`}
-                    ></div>
-                    <span className="font-medium text-gray-900">Public</span>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    All workspace members can view
-                  </p>
-                </div>
+            <div>
+              <label className={labelClass}>Visibility</label>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {[
+                  {
+                    value: "private",
+                    title: "Private",
+                    text: "Only assigned team members can view and manage.",
+                  },
+                  {
+                    value: "public",
+                    title: "Public",
+                    text: "All workspace members can view this process.",
+                  },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleInputChange("visibility", option.value)}
+                    className={`rounded-lg border p-4 text-left transition ${
+                      formData.visibility === option.value
+                        ? "border-blue-700 bg-blue-50"
+                        : "border-slate-300 bg-white hover:border-blue-300"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                      <span
+                        className={`h-2.5 w-2.5 rounded-full ${
+                          formData.visibility === option.value
+                            ? "bg-blue-700"
+                            : "bg-slate-300"
+                        }`}
+                      />
+                      {option.title}
+                    </span>
+                    <span className="mt-2 block text-xs font-medium text-slate-500">
+                      {option.text}
+                    </span>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -511,221 +456,140 @@ export default function EditProcessPage() {
       case 2:
         return (
           <div className="space-y-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Process Steps
-                </h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  Define each step in your workflow
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={addNewStep}
-                className="inline-flex items-center px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all shadow-sm"
-              >
-                <FiPlus className="mr-2 h-4 w-4" />
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <SectionIntro
+                icon={FiClock}
+                title="Process Steps"
+                text="Maintain step order, ownership, timing, and execution status."
+              />
+              <button type="button" onClick={addNewStep} className={primaryButtonClass}>
+                <FiPlus className="h-4 w-4" />
                 Add Step
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="max-h-[560px] space-y-4 overflow-y-auto pr-2">
               {formData.steps.map((step, index) => (
                 <div
                   key={step.id}
-                  className="bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-all"
+                  className="rounded-xl border border-slate-200 bg-white p-5 transition hover:shadow-md"
                 >
-                  <div className="flex items-start justify-between mb-4">
+                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="bg-white border-2 border-amber-200 rounded-lg px-4 py-2 shadow-sm">
-                        <span className="font-bold text-amber-600">
-                          Step {step.order}
-                        </span>
+                      <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-xs font-black text-blue-700">
+                        Step {step.order}
                       </div>
                       <div className="flex gap-1">
-                        <button
-                          onClick={() => moveStepUp(index)}
+                        <IconButton
+                          label="Move step up"
                           disabled={index === 0}
-                          className="p-1.5 text-gray-400 hover:text-amber-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                          title="Move Up"
-                        >
-                          <FiChevronLeft className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={() => moveStepDown(index)}
+                          onClick={() => moveStep(index, -1)}
+                          icon={FiChevronLeft}
+                        />
+                        <IconButton
+                          label="Move step down"
                           disabled={index === formData.steps.length - 1}
-                          className="p-1.5 text-gray-400 hover:text-amber-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                          title="Move Down"
-                        >
-                          <FiChevronRight className="h-5 w-5" />
-                        </button>
+                          onClick={() => moveStep(index, 1)}
+                          icon={FiChevronRight}
+                        />
                       </div>
                     </div>
                     {formData.steps.length > 1 && (
                       <button
+                        type="button"
                         onClick={() => removeStep(step.id)}
-                        className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                        title="Remove Step"
+                        className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
                       >
-                        <FiTrash2 className="h-5 w-5" />
+                        <FiTrash2 className="h-4 w-4" />
+                        Remove
                       </button>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="grid gap-4 md:grid-cols-2">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Step Title
+                      <label className={labelClass}>
+                        Step Title <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
                         value={step.title}
-                        onChange={(e) =>
-                          handleStepChange(step.id, "title", e.target.value)
+                        onChange={(event) =>
+                          handleStepChange(step.id, "title", event.target.value)
                         }
-                        className="w-full border border-gray-300 rounded-lg py-2.5 px-3 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                        placeholder="Enter step title"
+                        className={fieldClass}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Time Estimate
-                      </label>
-                      <select
+                      <label className={labelClass}>Time Estimate</label>
+                      <input
+                        type="text"
                         value={step.timeEstimate}
-                        onChange={(e) =>
-                          handleStepChange(
-                            step.id,
-                            "timeEstimate",
-                            e.target.value,
-                          )
+                        onChange={(event) =>
+                          handleStepChange(step.id, "timeEstimate", event.target.value)
                         }
-                        className="w-full border border-gray-300 rounded-lg py-2.5 px-3 focus:ring-2 focus:ring-amber-500"
+                        className={fieldClass}
+                        placeholder="e.g. 2 hours"
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Assignee</label>
+                      <select
+                        value={step.assignee}
+                        onChange={(event) =>
+                          handleStepChange(step.id, "assignee", event.target.value)
+                        }
+                        className={fieldClass}
+                        disabled={loadingUsers}
                       >
-                        <option value="15 min">15 minutes</option>
-                        <option value="30 min">30 minutes</option>
-                        <option value="1 hour">1 hour</option>
-                        <option value="2 hours">2 hours</option>
-                        <option value="4 hours">4 hours</option>
-                        <option value="1 day">1 day</option>
-                        <option value="2 days">2 days</option>
-                        <option value="1 week">1 week</option>
+                        <option value="">Select team member</option>
+                        {workspaceUsers.map((member) => (
+                          <option key={member._id || member.id} value={member._id || member.id}>
+                            {member.name || member.email} ({member.role || "member"})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelClass}>Status</label>
+                      <select
+                        value={step.status}
+                        onChange={(event) =>
+                          handleStepChange(step.id, "status", event.target.value)
+                        }
+                        className={fieldClass}
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="inprogress">In Progress</option>
+                        <option value="completed">Completed</option>
                       </select>
                     </div>
                   </div>
 
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Description
-                    </label>
+                  <div className="mt-4">
+                    <label className={labelClass}>Description</label>
                     <textarea
                       value={step.description}
-                      onChange={(e) =>
-                        handleStepChange(step.id, "description", e.target.value)
+                      onChange={(event) =>
+                        handleStepChange(step.id, "description", event.target.value)
                       }
-                      rows="2"
-                      className="w-full border border-gray-300 rounded-lg py-2.5 px-3 focus:ring-2 focus:ring-amber-500"
-                      placeholder="Describe what happens in this step"
+                      rows="3"
+                      className={fieldClass}
                     />
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Assign To
-                      </label>
-                      <div className="relative group">
-                        <div className="flex items-center gap-2 w-full border border-gray-300 rounded-lg py-1 px-3 focus-within:ring-2 focus-within:ring-amber-500 shadow-sm bg-white transition-all">
-                          {/* Member Icon/Avatar wrapper */}
-                          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 font-bold text-xs border border-amber-200 shadow-sm">
-                            {(() => {
-                              const currentId = typeof step.assignee === 'object' ? step.assignee._id : step.assignee;
-                              const member = workspaceUsers.find(u => u._id === currentId);
-                              return member ? member.name?.charAt(0).toUpperCase() : <FiUsers className="w-4 h-4" />;
-                            })()}
-                          </div>
-                          
-                          <select
-                            value={typeof step.assignee === 'object' ? step.assignee._id : step.assignee}
-                            onChange={(e) =>
-                              handleStepChange(step.id, "assignee", e.target.value)
-                            }
-                            className="flex-1 bg-transparent border-none focus:ring-0 py-2 text-sm font-medium text-gray-900 appearance-none outline-none cursor-pointer"
-                          >
-                            <option value="">No one assigned</option>
-                            {workspaceUsers
-                              .filter(
-                                (member) =>
-                                  (member.role !== "admin" && member.role !== "superadmin") ||
-                                  member._id === (typeof step.assignee === "object" ? step.assignee._id : step.assignee)
-                              )
-                              .map((member) => (
-                              <option key={member._id} value={member._id}>
-                                {member.name} ({member.role})
-                              </option>
-                            ))}
-                          </select>
-                          
-                          {/* Custom Dropdown Arrow */}
-                          <div className="pointer-events-none pr-1">
-                            <FiChevronDown className="h-4 w-4 text-gray-400 group-hover:text-amber-500 transition-colors" />
-                          </div>
-                        </div>
-                        
-                        {/* Selected Role Badge (subtle) */}
-                        {(() => {
-                          const currentId = typeof step.assignee === 'object' ? step.assignee._id : step.assignee;
-                          const member = workspaceUsers.find(u => u._id === currentId);
-                          if (member) {
-                            return (
-                              <div className="absolute right-8 top-1/2 -translate-y-1/2 hidden sm:block pointer-events-none">
-                                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                                  member.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
-                                }`}>
-                                  {member.role}
-                                </span>
-                              </div>
-                            );
-                          }
-                          return null;
-                        })()}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Notes (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={step.notes || ""}
-                        onChange={(e) =>
-                          handleStepChange(step.id, "notes", e.target.value)
-                        }
-                        className="w-full border border-gray-300 rounded-lg py-2.5 px-3 focus:ring-2 focus:ring-amber-500"
-                        placeholder="Additional notes for this step"
-                      />
-                    </div>
+                  <div className="mt-4">
+                    <label className={labelClass}>Notes</label>
+                    <textarea
+                      value={step.notes}
+                      onChange={(event) =>
+                        handleStepChange(step.id, "notes", event.target.value)
+                      }
+                      rows="2"
+                      className={fieldClass}
+                    />
                   </div>
                 </div>
               ))}
-            </div>
-
-            <div className="bg-amber-50 rounded-xl border border-amber-200 p-4">
-              <div className="flex items-start gap-3">
-                <FiHelpCircle className="h-5 w-5 text-amber-600 mt-0.5" />
-                <div>
-                  <p className="font-medium text-gray-900">Pro Tips</p>
-                  <ul className="text-sm text-gray-600 mt-2 space-y-1">
-                    <li>
-                      • Keep each step focused on a single task or decision
-                    </li>
-                    <li>• Assign steps to specific roles for clarity</li>
-                    <li>• Add notes to provide helpful context</li>
-                    <li>• Drag steps to reorder them as needed</li>
-                  </ul>
-                </div>
-              </div>
             </div>
           </div>
         );
@@ -733,99 +597,64 @@ export default function EditProcessPage() {
       case 3:
         return (
           <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Assign Team Members
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Select team members who can view and participate in this process
-              </p>
+            <SectionIntro
+              icon={FiUsers}
+              title="Team Assignments"
+              text="Choose the people who can access this process and receive updates."
+            />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {loadingUsers ? (
-                  <div className="col-span-2 py-12 flex flex-col items-center justify-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500 mb-2"></div>
-                    <p className="text-sm text-gray-500">Fetching workspace members...</p>
-                  </div>
-                ) : workspaceUsers.length === 0 ? (
-                  <div className="col-span-2 py-12 text-center bg-gray-50 rounded-2xl">
-                    <FiUsers className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">No team members found</p>
-                  </div>
-                ) : (
-                  workspaceUsers
-                    .filter(
-                      (member) =>
-                        (member.role !== "admin" && member.role !== "superadmin") ||
-                        formData.assignedTo.includes(member._id) ||
-                        formData.assignedTo.includes(member.email)
-                    )
-                    .map((member) => (
-                    <div
-                      key={member._id}
-                      className={`border rounded-xl p-4 cursor-pointer transition-all flex items-center gap-3 ${
-                        formData.assignedTo.includes(member._id) || formData.assignedTo.includes(member.email)
-                          ? "border-amber-500 bg-amber-50 shadow-sm"
-                          : "border-gray-200 hover:border-amber-300 hover:bg-amber-50/30"
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {loadingUsers ? (
+                <div className="col-span-full rounded-xl border border-slate-200 bg-slate-50 p-6 text-sm font-semibold text-slate-500">
+                  Loading workspace members...
+                </div>
+              ) : (
+                workspaceUsers.map((member) => {
+                  const memberId = member._id || member.id;
+                  const selected = formData.assignedTo.includes(memberId);
+
+                  return (
+                    <button
+                      key={memberId}
+                      type="button"
+                      onClick={() => toggleAssignment(memberId)}
+                      className={`flex min-h-[86px] items-center gap-3 rounded-xl border p-4 text-left transition ${
+                        selected
+                          ? "border-blue-700 bg-blue-50"
+                          : "border-slate-200 bg-white hover:border-blue-300"
                       }`}
-                      onClick={() => {
-                        const memberId = member._id;
-                        const isSelected = formData.assignedTo.includes(memberId) || formData.assignedTo.includes(member.email);
-                        
-                        const newAssigned = isSelected
-                          ? formData.assignedTo.filter(id => id !== memberId && id !== member.email)
-                          : [...formData.assignedTo, memberId];
-                          
-                        handleInputChange("assignedTo", newAssigned);
-                      }}
                     >
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          formData.assignedTo.includes(member._id) || formData.assignedTo.includes(member.email)
-                            ? "bg-amber-500 text-white"
-                            : "bg-gray-200 text-gray-600"
-                        }`}
-                      >
-                        {formData.assignedTo.includes(member._id) || formData.assignedTo.includes(member.email) ? (
-                          <FiCheck className="h-5 w-5" />
-                        ) : (
-                          <span className="font-semibold">{member.name?.charAt(0).toUpperCase()}</span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-gray-900 truncate">
-                          {member.name}
-                        </p>
-                        <p className="text-xs text-gray-500 truncate">{member.email}</p>
-                      </div>
                       <span
-                        className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg ${
-                          member.role === "admin"
-                            ? "bg-purple-100 text-purple-700"
-                            : member.role === "editor"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-gray-100 text-gray-600"
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-black ${
+                          selected ? "bg-blue-700 text-white" : "bg-slate-100 text-slate-600"
                         }`}
                       >
-                        {member.role}
+                        {selected ? <FiCheck /> : (member.name || member.email || "U").charAt(0)}
                       </span>
-                    </div>
-                  ))
-                )}
-              </div>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-bold text-slate-900">
+                          {member.name || "Unnamed member"}
+                        </span>
+                        <span className="block truncate text-xs font-medium text-slate-500">
+                          {member.email}
+                        </span>
+                      </span>
+                      <span className="rounded bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase text-slate-600">
+                        {member.role || "member"}
+                      </span>
+                    </button>
+                  );
+                })
+              )}
             </div>
 
-            <div className="bg-blue-50 rounded-xl border border-blue-200 p-4">
+            <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
               <div className="flex items-start gap-3">
-                <FiUsers className="h-5 w-5 text-blue-600 mt-0.5" />
-                <div>
-                  <p className="font-medium text-gray-900">Assignment Notes</p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Assigned members will receive notifications about process
-                    updates. You can also assign specific team members to
-                    individual steps in the previous section.
-                  </p>
-                </div>
+                <FiHelpCircle className="mt-0.5 h-5 w-5 text-blue-700" />
+                <p className="text-sm font-medium text-slate-700">
+                  Step assignees are automatically added here so they keep access to the
+                  process they are responsible for.
+                </p>
               </div>
             </div>
           </div>
@@ -833,157 +662,44 @@ export default function EditProcessPage() {
 
       case 4:
         return (
-          <div className="space-y-8">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">
-                Process Settings
-              </h3>
-
-              <div className="space-y-6">
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
-                    <FiBell className="h-4 w-4" />
-                    Notifications
-                  </h4>
-                  <div className="space-y-3">
-                    {formData.notifications &&
-                      Object.entries(formData.notifications).map(
-                        ([key, value]) => (
-                          <div
-                            key={key}
-                            className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
-                          >
-                            <div>
-                              <p className="font-medium text-gray-900 capitalize">
-                                {key} Notifications
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                {key === "email" &&
-                                  "Receive email notifications for process updates"}
-                                {key === "slack" &&
-                                  "Get notified in Slack channel"}
-                                {key === "inApp" && "Show notifications in-app"}
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleInputChange("notifications", {
-                                  ...formData.notifications,
-                                  [key]: !value,
-                                })
-                              }
-                              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 ${
-                                value ? "bg-amber-500" : "bg-gray-300"
-                              }`}
-                            >
-                              <span
-                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                  value ? "translate-x-5" : "translate-x-0"
-                                }`}
-                              />
-                            </button>
-                          </div>
-                        ),
-                      )}
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
-                    <FiZap className="h-4 w-4" />
-                    Automation Rules
-                  </h4>
-                  <div className="space-y-3">
-                    {formData.automation &&
-                      Object.entries(formData.automation).map(
-                        ([key, value]) => (
-                          <div
-                            key={key}
-                            className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
-                          >
-                            <div>
-                              <p className="font-medium text-gray-900">
-                                {key === "autoAssign"
-                                  ? "Auto-assign Tasks"
-                                  : key === "dueDateReminders"
-                                    ? "Due Date Reminders"
-                                    : "Escalate Overdue Tasks"}
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                {key === "autoAssign" &&
-                                  "Automatically assign tasks to available team members"}
-                                {key === "dueDateReminders" &&
-                                  "Send reminders before tasks are due"}
-                                {key === "escalation" &&
-                                  "Escalate overdue tasks to managers"}
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleInputChange("automation", {
-                                  ...formData.automation,
-                                  [key]: !value,
-                                })
-                              }
-                              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 ${
-                                value ? "bg-amber-500" : "bg-gray-300"
-                              }`}
-                            >
-                              <span
-                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                  value ? "translate-x-5" : "translate-x-0"
-                                }`}
-                              />
-                            </button>
-                          </div>
-                        ),
-                      )}
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-4">
-                    Attachments
-                  </h4>
-                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-amber-300 transition-colors">
-                    <FiUpload className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-600 mb-2">
-                      Drag and drop files here, or click to browse
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Supports PDF, DOC, XLS up to 10MB each
-                    </p>
-                    <button
-                      type="button"
-                      className="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                    >
-                      Browse Files
-                    </button>
-                  </div>
-                  {/* Existing attachments would show here */}
-                  <div className="mt-3 space-y-2">
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <FiFileText className="h-5 w-5 text-gray-500" />
-                        <div>
-                          <p className="text-sm font-medium">
-                            onboarding_checklist.pdf
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            2.4 MB • Uploaded Jan 15, 2024
-                          </p>
-                        </div>
-                      </div>
-                      <button className="text-gray-400 hover:text-red-500">
-                        <FiX className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="space-y-7">
+            <SectionIntro
+              icon={FiSettings}
+              title="Process Settings"
+              text="Tune notifications and automation before saving the update."
+            />
+            <SettingsGroup
+              icon={FiBell}
+              title="Notifications"
+              items={formData.notifications}
+              labels={{
+                email: ["Email Notifications", "Receive email updates for process activity."],
+                slack: ["Slack Notifications", "Send updates into the connected Slack channel."],
+                inApp: ["In-app Notifications", "Show updates inside the workspace."],
+              }}
+              onToggle={(key) =>
+                handleInputChange("notifications", {
+                  ...formData.notifications,
+                  [key]: !formData.notifications[key],
+                })
+              }
+            />
+            <SettingsGroup
+              icon={FiZap}
+              title="Automation Rules"
+              items={formData.automation}
+              labels={{
+                autoAssign: ["Auto-assign Tasks", "Assign tasks to available team members."],
+                dueDateReminders: ["Due Date Reminders", "Send reminders before tasks are due."],
+                escalation: ["Escalate Overdue Tasks", "Escalate overdue work to managers."],
+              }}
+              onToggle={(key) =>
+                handleInputChange("automation", {
+                  ...formData.automation,
+                  [key]: !formData.automation[key],
+                })
+              }
+            />
           </div>
         );
 
@@ -994,45 +710,39 @@ export default function EditProcessPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="-m-4 flex min-h-[calc(100vh-9rem)] items-center justify-center bg-linear-to-br from-blue-50 via-sky-50 to-violet-50 p-6 sm:-m-6">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading process data...</p>
+          <div className="mx-auto mb-4 h-11 w-11 animate-spin rounded-full border-2 border-blue-100 border-t-blue-700" />
+          <p className="text-sm font-semibold text-slate-600">Loading process data...</p>
         </div>
       </div>
     );
   }
 
   if (success) {
+    const deleted = successMessage.toLowerCase().includes("deleted");
+
     return (
-      <div className="py-6">
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-8 text-center">
-          <div className="bg-green-100 rounded-full p-4 w-fit mx-auto mb-4">
-            <FiCheck className="h-12 w-12 text-green-600" />
+      <div className="-m-4 min-h-[calc(100vh-9rem)] bg-linear-to-br from-blue-50 via-sky-50 to-violet-50 p-4 sm:-m-6 sm:p-6">
+        <div className="mx-auto max-w-2xl rounded-xl border border-green-200 bg-white p-8 text-center shadow-[0_18px_45px_rgba(34,197,94,0.12)]">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+            <FiCheck className="h-8 w-8 text-green-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            {successMessage.includes("deleted")
-              ? "Process Deleted!"
-              : "Process Updated!"}
+          <h2 className="text-2xl font-black text-slate-950">
+            {deleted ? "Process Deleted" : "Process Updated"}
           </h2>
-          <p className="text-gray-600 mb-6">
-            {successMessage.includes("deleted")
-              ? "The process has been permanently deleted"
-              : `${formData.name} has been updated successfully`}
+          <p className="mt-2 text-sm font-medium text-slate-600">
+            {deleted
+              ? "The process has been permanently deleted."
+              : `${formData.name} has been updated successfully.`}
           </p>
-          <div className="flex space-x-3 justify-center">
-            {!successMessage.includes("deleted") && (
-              <Link
-                href={`/processes/${id}`}
-                className="px-6 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all shadow-md"
-              >
+          <div className="mt-6 flex justify-center gap-3">
+            {!deleted && (
+              <Link href={`/processes/${id}`} className={primaryButtonClass}>
                 View Process
               </Link>
             )}
-            <Link
-              href="/processes"
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:border-amber-300 hover:text-amber-600 transition-all"
-            >
+            <Link href="/processes" className={secondaryButtonClass}>
               Back to Processes
             </Link>
           </div>
@@ -1042,38 +752,38 @@ export default function EditProcessPage() {
   }
 
   return (
-    <div className="py-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4">
-          <Link
-            href={`/processes/${id}`}
-            className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <FiArrowLeft className="h-5 w-5 mr-2" />
-            Back to Process
-          </Link>
-          <div className="h-8 w-px bg-gray-300"></div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-              Edit Process
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Update your workflow configuration
-            </p>
-          </div>
+    <div className="-m-4 min-h-[calc(100vh-9rem)] bg-linear-to-br from-blue-50 via-sky-50 to-violet-50 p-4 sm:-m-6 sm:p-6">
+      {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
+
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <Link
+          href={`/processes/${id}`}
+          className="inline-flex items-center text-sm font-semibold text-slate-600 transition hover:text-blue-700"
+        >
+          <FiArrowLeft className="mr-2 h-4 w-4" />
+          Back to Process
+        </Link>
+
+        <div className="text-center md:absolute md:left-1/2 md:-translate-x-1/2">
+          <h1 className="text-2xl font-black text-slate-950">Edit Process</h1>
+          <p className="mt-1 text-xs font-medium text-slate-500">
+            Refine your high-fidelity enterprise workflow.
+          </p>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex flex-wrap items-center gap-3">
           <button
-            onClick={() => setShowPreview(!showPreview)}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:border-amber-300 hover:text-amber-600 transition-all flex items-center gap-2"
+            type="button"
+            onClick={() => setShowPreview((current) => !current)}
+            className={secondaryButtonClass}
           >
             <FiEye className="h-4 w-4" />
             {showPreview ? "Hide Preview" : "Show Preview"}
           </button>
           <button
+            type="button"
             onClick={() => setShowDeleteModal(true)}
-            className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-all flex items-center gap-2"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
           >
             <FiTrash2 className="h-4 w-4" />
             Delete
@@ -1081,332 +791,339 @@ export default function EditProcessPage() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        {/* Main Form */}
-        <div className={`${showPreview ? "lg:col-span-2" : "lg:col-span-3"}`}>
-          {/* Error Alert */}
-          {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3">
-              <FiAlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold text-red-900">Error</h3>
-                <p className="text-red-700 text-sm mt-0.5">{error}</p>
-              </div>
-            </div>
-          )}
+      <ProcessStepper
+        steps={stepsConfig}
+        activeStep={activeStep}
+        onStepClick={(stepNumber) => stepNumber < activeStep && setActiveStep(stepNumber)}
+      />
 
-          <div className="bg-white rounded-2xl border border-amber-100 shadow-sm overflow-hidden">
-            {/* Progress Bar */}
-            <div className="px-6 py-4 border-b border-amber-100 bg-gradient-to-r from-gray-50 to-white">
-              <div className="flex justify-between items-center mb-2">
-                <div className="text-sm font-medium text-gray-900">
-                  Step {activeStep} of {stepsConfig.length}:{" "}
-                  {stepsConfig.find((s) => s.number === activeStep)?.title}
-                </div>
-                <div className="text-sm text-gray-500">
-                  {
-                    stepsConfig.find((s) => s.number === activeStep)
-                      ?.description
-                  }
-                </div>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-gradient-to-r from-amber-500 to-amber-600 h-2 rounded-full transition-all duration-500"
-                  style={{
-                    width: `${((activeStep - 1) / (stepsConfig.length - 1)) * 100}%`,
-                  }}
-                ></div>
-              </div>
-            </div>
-
-            {/* Step Indicators */}
-            <div className="px-6 py-4 border-b border-amber-100 bg-white">
-              <div className="flex justify-between">
-                {stepsConfig.map((step) => (
-                  <div key={step.number} className="flex flex-col items-center">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 cursor-pointer transition-all ${
-                        step.number === activeStep
-                          ? "bg-amber-500 text-white shadow-md"
-                          : step.number < activeStep
-                            ? "bg-amber-100 text-amber-600 hover:bg-amber-200"
-                            : "bg-gray-100 text-gray-400 hover:bg-gray-200"
-                      }`}
-                      onClick={() =>
-                        step.number < activeStep && setActiveStep(step.number)
-                      }
-                    >
-                      {step.number < activeStep ? (
-                        <FiCheck className="w-5 h-5" />
-                      ) : (
-                        step.number
-                      )}
-                    </div>
-                    <span
-                      className={`text-xs font-medium ${
-                        step.number === activeStep
-                          ? "text-amber-600"
-                          : "text-gray-500"
-                      }`}
-                    >
-                      {step.title}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Form Content */}
-            <div className="p-6">
-              {/* Step content — NOT inside a form to prevent accidental submit */}
+      <div className="grid gap-8 lg:grid-cols-3">
+        <div className={showPreview ? "lg:col-span-2" : "lg:col-span-3"}>
+          <div className="mx-auto max-w-5xl overflow-hidden rounded-xl border border-white/70 bg-white/90 shadow-[0_18px_45px_rgba(37,99,235,0.08)]">
+            <form onSubmit={handleSubmit} className="p-8">
               {renderStepContent()}
 
-              {/* Navigation Buttons */}
-              <div className="mt-8 pt-6 border-t border-gray-200 flex justify-between">
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  disabled={activeStep === 1}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
-                    activeStep === 1
-                      ? "text-gray-400 cursor-not-allowed"
-                      : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"
-                  }`}
-                >
-                  <FiChevronLeft className="w-4 h-4" />
-                  Previous
-                </button>
-
-                {activeStep === stepsConfig.length ? (
-                  /* Only the final Update button uses a real form submit */
-                  <form onSubmit={handleSubmit} style={{ display: 'contents' }}>
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="flex items-center gap-2 px-8 py-3 rounded-lg font-medium text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-500/25"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Updating Process...
-                        </>
-                      ) : (
-                        <>
-                          <FiSave className="w-4 h-4" />
-                          Update Process
-                        </>
-                      )}
-                    </button>
-                  </form>
+              <div className="mt-8 flex items-center justify-between border-t border-slate-200 pt-6">
+                {activeStep === 1 ? (
+                  <Link
+                    href={`/processes/${id}`}
+                    className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950"
+                  >
+                    <span className="text-lg leading-none">x</span>
+                    Cancel
+                  </Link>
                 ) : (
                   <button
                     type="button"
-                    onClick={handleNext}
-                    className="flex items-center gap-2 px-8 py-3 rounded-lg font-medium text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all"
+                    onClick={handleBack}
+                    className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950"
                   >
-                    Next Step
-                    <FiChevronRight className="w-4 h-4" />
+                    <FiChevronLeft className="h-4 w-4" />
+                    Previous
+                  </button>
+                )}
+
+                {activeStep === stepsConfig.length ? (
+                  <button type="submit" disabled={isSubmitting} className={primaryButtonClass}>
+                    {isSubmitting ? (
+                      <>
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                        Updating Process...
+                      </>
+                    ) : (
+                      <>
+                        <FiSave className="h-4 w-4" />
+                        Update Process
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <button type="button" onClick={handleNext} className={primaryButtonClass}>
+                    Save & Continue
+                    <FiChevronRight className="h-4 w-4" />
                   </button>
                 )}
               </div>
-            </div>
+            </form>
           </div>
         </div>
 
-        {/* Preview Sidebar */}
-        {showPreview && (
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl border border-amber-100 shadow-sm sticky top-24">
-              <div className="px-5 py-4 border-b border-amber-100 bg-gradient-to-r from-amber-50 to-white">
-                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <FiEye className="h-5 w-5 text-amber-500" />
-                  Live Preview
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  See how your process will look
-                </p>
-              </div>
-              <div className="p-5 space-y-5">
-                <div>
-                  <h3 className="font-medium text-gray-900 mb-3 text-sm uppercase tracking-wide">
-                    Basic Info
-                  </h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Name:</span>
-                      <span className="font-medium text-gray-900 truncate max-w-[180px]">
-                        {formData.name || "Not set"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Category:</span>
-                      <span className="font-medium text-gray-900">
-                        {formData.category || "Not set"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Visibility:</span>
-                      <span className="font-medium capitalize text-gray-900">
-                        {formData.visibility}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-gray-200">
-                  <h3 className="font-medium text-gray-900 mb-3 text-sm uppercase tracking-wide">
-                    Workflow
-                  </h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Total Steps:</span>
-                      <span className="font-medium text-gray-900">
-                        {formData.steps.length}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Assigned Members:</span>
-                      <span className="font-medium text-gray-900">
-                        {formData.assignedTo.length}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-gray-200">
-                  <h3 className="font-medium text-gray-900 mb-3 text-sm uppercase tracking-wide">
-                    Steps Preview
-                  </h3>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {formData.steps.slice(0, 4).map((step) => (
-                      <div
-                        key={step.id}
-                        className="flex items-center gap-2 text-sm p-2 bg-gray-50 rounded-lg"
-                      >
-                        <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs font-bold">
-                          {step.order}
-                        </div>
-                        <span className="text-gray-700 flex-1 truncate">
-                          {step.title}
-                        </span>
-                        <FiClock className="h-3 w-3 text-gray-400" />
-                        <span className="text-xs text-gray-500">
-                          {step.timeEstimate}
-                        </span>
-                      </div>
-                    ))}
-                    {formData.steps.length > 4 && (
-                      <p className="text-xs text-center text-gray-500 mt-2">
-                        +{formData.steps.length - 4} more steps
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-gray-200">
-                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <FiZap className="h-5 w-5 text-amber-600" />
-                      <p className="text-sm font-semibold text-gray-900">
-                        AI Ready
-                      </p>
-                    </div>
-                    <p className="text-xs text-gray-600">
-                      After saving, AI will analyze your workflow and suggest
-                      optimizations
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {showPreview && <PreviewPanel formData={formData} />}
       </div>
 
-      {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 animate-in fade-in zoom-in duration-300">
-            <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
-              <FiAlertCircle className="h-6 w-6 text-red-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">
-              Delete Process?
-            </h2>
-            <p className="text-gray-600 text-center mb-6">
-              Are you sure you want to delete{" "}
-              <span className="font-semibold">"{formData.name}"</span>? This
-              action cannot be undone.
-            </p>
-            <div className="space-y-3">
-              <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isDeleting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Deleting...
-                  </>
-                ) : (
-                  <>
-                    <FiTrash2 className="h-4 w-4" />
-                    Delete Process
-                  </>
-                )}
-              </button>
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                disabled={isDeleting}
-                className="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 hover:bg-gray-50 font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeleteProcessModal
+          name={formData.name}
+          loading={isDeleting}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleDelete}
+        />
       )}
     </div>
   );
 }
 
-// Helper component
-function FiBell(props) {
+function ProcessStepper({ steps, activeStep, onStepClick }) {
   return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-      />
-    </svg>
+    <div className="mx-auto mb-7 max-w-3xl px-4">
+      <div className="relative flex items-start justify-between">
+        <div className="absolute left-8 right-8 top-4 h-px bg-blue-100" />
+        {steps.map((step) => {
+          const isActive = step.number === activeStep;
+          const isComplete = step.number < activeStep;
+
+          return (
+            <button
+              key={step.number}
+              type="button"
+              onClick={() => onStepClick(step.number)}
+              className="relative flex min-w-0 flex-col items-center gap-2"
+            >
+              <span
+                className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-black shadow-sm transition ${
+                  isActive
+                    ? "bg-blue-700 text-white shadow-blue-200"
+                    : isComplete
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-slate-100 text-slate-400"
+                }`}
+              >
+                {isComplete ? <FiCheck className="h-4 w-4" /> : step.number}
+              </span>
+              <span
+                className={`max-w-24 truncate text-center text-[10px] font-black ${
+                  isActive ? "text-blue-700" : "text-slate-500"
+                }`}
+              >
+                {step.title}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
-function FiFileText(props) {
+function SectionIntro({ icon: Icon, title, text }) {
   return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
+    <div className="flex items-start gap-3">
+      <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+        <Icon className="h-4 w-4" />
+      </div>
+      <div>
+        <h2 className="text-sm font-bold text-slate-950">{title}</h2>
+        <p className="mt-1 text-xs font-medium text-slate-500">{text}</p>
+      </div>
+    </div>
+  );
+}
+
+function IconButton({ label, icon: Icon, disabled, onClick }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      disabled={disabled}
+      className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-30"
     >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+      <Icon className="h-4 w-4" />
+    </button>
+  );
+}
+
+function SettingsGroup({ icon: Icon, title, items, labels, onToggle }) {
+  return (
+    <div>
+      <h3 className="mb-4 flex items-center gap-2 text-sm font-black text-slate-900">
+        <Icon className="h-4 w-4 text-blue-700" />
+        {title}
+      </h3>
+      <div className="space-y-3">
+        {Object.entries(items).map(([key, value]) => (
+          <div
+            key={key}
+            className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4"
+          >
+            <div>
+              <p className="text-sm font-bold text-slate-900">{labels[key][0]}</p>
+              <p className="mt-1 text-xs font-medium text-slate-500">{labels[key][1]}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onToggle(key)}
+              className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition focus:outline-none focus:ring-2 focus:ring-blue-300 ${
+                value ? "bg-blue-700" : "bg-slate-300"
+              }`}
+              aria-pressed={value}
+            >
+              <span
+                className={`inline-block h-6 w-6 rounded-full bg-white shadow transition ${
+                  value ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PreviewPanel({ formData }) {
+  return (
+    <div className="lg:col-span-1">
+      <div className="sticky top-24 overflow-hidden rounded-xl border border-white/70 bg-white/90 shadow-[0_18px_45px_rgba(37,99,235,0.08)]">
+        <div className="border-b border-slate-200 bg-blue-50/70 px-5 py-4">
+          <h2 className="flex items-center gap-2 text-base font-black text-slate-950">
+            <FiEye className="h-4 w-4 text-blue-700" />
+            Live Preview
+          </h2>
+          <p className="mt-1 text-xs font-medium text-slate-500">
+            See how your process will look
+          </p>
+        </div>
+        <div className="space-y-5 p-5">
+          <PreviewRows
+            title="Basic Info"
+            rows={[
+              ["Name", formData.name || "Not set"],
+              ["Category", formData.category || "Not set"],
+              ["Visibility", formData.visibility],
+            ]}
+          />
+          <PreviewRows
+            title="Workflow"
+            rows={[
+              ["Total Steps", formData.steps.length],
+              ["Assigned Members", formData.assignedTo.length],
+            ]}
+          />
+          <div className="border-t border-slate-200 pt-3">
+            <h3 className="mb-3 text-xs font-black uppercase text-slate-900">
+              Steps Preview
+            </h3>
+            <div className="max-h-48 space-y-2 overflow-y-auto">
+              {formData.steps.slice(0, 4).map((step) => (
+                <div
+                  key={step.id}
+                  className="flex items-center gap-2 rounded-lg bg-slate-50 p-2 text-sm"
+                >
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
+                    {step.order}
+                  </div>
+                  <span className="flex-1 truncate text-slate-700">{step.title}</span>
+                  <FiClock className="h-3 w-3 text-slate-400" />
+                  <span className="text-xs text-slate-500">{step.timeEstimate}</span>
+                </div>
+              ))}
+              {formData.steps.length > 4 && (
+                <p className="mt-2 text-center text-xs text-slate-500">
+                  +{formData.steps.length - 4} more steps
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="border-t border-slate-200 pt-3">
+            <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <FiZap className="h-5 w-5 text-blue-700" />
+                <p className="text-sm font-bold text-slate-900">AI Ready</p>
+              </div>
+              <p className="text-xs text-slate-600">
+                After saving, AI can analyze the workflow and suggest optimizations.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PreviewRows({ title, rows }) {
+  return (
+    <div className="border-t border-slate-200 pt-3 first:border-t-0 first:pt-0">
+      <h3 className="mb-3 text-xs font-black uppercase text-slate-900">{title}</h3>
+      <div className="space-y-2 text-sm">
+        {rows.map(([label, value]) => (
+          <div key={label} className="flex justify-between gap-3">
+            <span className="text-slate-500">{label}:</span>
+            <span className="max-w-[180px] truncate font-bold capitalize text-slate-900">
+              {value}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ErrorAlert({ message, onDismiss }) {
+  return (
+    <div className="mb-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
+      <FiAlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+      <div className="flex-1">
+        <h3 className="text-sm font-black text-red-900">Error</h3>
+        <p className="mt-1 text-sm font-medium text-red-700">{message}</p>
+      </div>
+      <button
+        type="button"
+        onClick={onDismiss}
+        className="rounded-md px-2 text-lg leading-none text-red-500 hover:bg-red-100"
+        aria-label="Dismiss error"
+      >
+        x
+      </button>
+    </div>
+  );
+}
+
+function DeleteProcessModal({ name, loading, onClose, onConfirm }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label="Close delete dialog"
+        className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm"
+        onClick={onClose}
       />
-    </svg>
+      <div className="relative w-full max-w-md rounded-xl bg-white p-8 text-center shadow-2xl">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-red-50 text-red-600">
+          <FiAlertCircle className="h-7 w-7" />
+        </div>
+        <h2 className="text-xl font-black text-slate-950">Delete Process?</h2>
+        <p className="mx-auto mt-2 max-w-sm text-sm font-medium text-slate-600">
+          Are you sure you want to delete{" "}
+          <span className="font-bold text-slate-950">{name || "this process"}</span>?
+          This action cannot be undone.
+        </p>
+        <div className="mt-6 flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className={secondaryButtonClass}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+            ) : (
+              <FiTrash2 className="h-4 w-4" />
+            )}
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

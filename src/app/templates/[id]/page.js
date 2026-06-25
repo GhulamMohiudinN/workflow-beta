@@ -50,7 +50,7 @@ export default function TemplateDetailPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mb-4"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-700 mb-4"></div>
         <p className="text-gray-600 font-medium">Loading Template details...</p>
       </div>
     );
@@ -75,12 +75,12 @@ export default function TemplateDetailPage() {
   const categoryColor = getCategoryColor(template.category);
 
   return (
-    <div className="py-6 px-6 max-w-7xl mx-auto">
+    <div className="-m-4 min-h-[calc(100vh-9rem)] bg-linear-to-br from-slate-50 via-cyan-50 to-emerald-50 p-4 sm:-m-6 sm:p-6">
       {/* Header Section */}
       <div className="mb-6 flex items-center justify-between">
         <Link
           href="/templates"
-          className="flex items-center text-sm font-medium text-gray-500 hover:text-amber-600 transition-colors"
+          className="flex items-center text-sm font-medium text-gray-500 hover:text-cyan-700 transition-colors"
         >
           <FiArrowLeft className="mr-2 h-4 w-4" />
           Back to Templates
@@ -96,7 +96,7 @@ export default function TemplateDetailPage() {
           </Link>
           <Link
             href={`/processes/new?templateId=${template._id || template.id}`}
-            className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700 transition-all font-bold shadow-md shadow-amber-500/20"
+            className="flex items-center gap-2 px-5 py-2 bg-cyan-700 text-white rounded-lg hover:bg-cyan-800 transition-all font-bold shadow-md shadow-cyan-700/20"
           >
             <FiCopy className="h-5 w-5" />
             Use Template
@@ -105,17 +105,16 @@ export default function TemplateDetailPage() {
       </div>
 
       {/* Main Title Card */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6 relative">
-        <div className={`absolute top-0 left-0 w-full h-2 ${categoryColor}`}></div>
+      <div className="bg-white/90 rounded-xl border border-cyan-100 shadow-sm overflow-hidden mb-6 relative">
         <div className="p-8">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-3">
-                <span className={`px-2.5 py-1 text-xs font-bold uppercase tracking-wider rounded-md text-white ${categoryColor}`}>
+                <span className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider rounded-md bg-cyan-50 text-cyan-700">
                   {template.category || "Uncategorized"}
                 </span>
                 <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${
-                  template.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                  template.status === 'active' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'
                 }`}>
                   {template.status?.toUpperCase() || "DRAFT"}
                 </span>
@@ -134,24 +133,24 @@ export default function TemplateDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Steps */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <div className="bg-white/90 rounded-xl border border-cyan-100 shadow-sm p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                <FiLayers className="text-amber-500" /> Predefined Flow ({template.steps?.length || 0} Steps)
+                <FiLayers className="text-cyan-700" /> Predefined Flow ({template.steps?.length || 0} Steps)
               </h2>
             </div>
 
             <div className="space-y-4">
               {(template.steps || []).map((step, index) => (
-                <div key={step._id || index} className="flex bg-gray-50 rounded-xl border border-gray-100 p-4 hover:shadow-md transition-shadow relative overflow-hidden group">
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-200 group-hover:bg-amber-500 transition-colors"></div>
+                <div key={step._id || index} className="flex bg-slate-50 rounded-xl border border-slate-100 p-4 hover:shadow-md transition-shadow relative overflow-hidden group">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-cyan-200 group-hover:bg-cyan-600 transition-colors"></div>
                   
                   <div className="w-10 flex-shrink-0 flex flex-col items-center">
-                    <div className="w-7 h-7 rounded-full bg-white border-2 border-amber-400 flex items-center justify-center font-bold text-amber-600 text-sm shadow-sm z-10">
+                    <div className="w-7 h-7 rounded-full bg-white border-2 border-cyan-300 flex items-center justify-center font-bold text-cyan-700 text-sm shadow-sm z-10">
                       {step.sequence || step.order || index + 1}
                     </div>
                     {index !== template.steps.length - 1 && (
-                      <div className="w-px h-full bg-amber-100 mt-2"></div>
+                      <div className="w-px h-full bg-cyan-100 mt-2"></div>
                     )}
                   </div>
                   
@@ -163,7 +162,7 @@ export default function TemplateDetailPage() {
                     
                     <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-gray-500">
                       <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded border border-gray-200 shadow-sm">
-                        <FiClock className="text-amber-500" /> 
+                        <FiClock className="text-cyan-700" /> 
                         <span>Est: <span className="text-gray-800">{step.timeEstimate || "1d"}</span></span>
                       </div>
                       
@@ -176,8 +175,8 @@ export default function TemplateDetailPage() {
                     </div>
                     
                     {step.notes && (
-                      <div className="mt-3 bg-white p-3 rounded-lg border border-amber-100 text-sm italic text-gray-600 flex items-start gap-2">
-                         <FiAlignLeft className="shrink-0 mt-0.5 text-amber-500" />
+                      <div className="mt-3 bg-white p-3 rounded-lg border border-cyan-100 text-sm italic text-gray-600 flex items-start gap-2">
+                         <FiAlignLeft className="shrink-0 mt-0.5 text-cyan-700" />
                          <span>{step.notes}</span>
                       </div>
                     )}
@@ -197,9 +196,9 @@ export default function TemplateDetailPage() {
 
         {/* Right Column - Settings & Meta */}
         <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-              <FiSettings className="text-amber-500" />
+          <div className="bg-white/90 rounded-xl border border-cyan-100 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
+              <FiSettings className="text-cyan-700" />
               <h2 className="font-bold text-gray-900">Default Configuration</h2>
             </div>
             
@@ -224,7 +223,7 @@ export default function TemplateDetailPage() {
             </div>
           </div>
           
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 text-sm text-gray-500">
+          <div className="bg-white/90 rounded-xl border border-cyan-100 shadow-sm p-6 text-sm text-gray-500">
             <p className="flex justify-between py-2 border-b border-gray-50">
               <span>Created:</span>
               <span className="font-medium text-gray-900">{new Date(template.createdAt).toLocaleDateString() || "Unknown"}</span>
@@ -250,7 +249,7 @@ function SettingRow({ label, active }) {
     <div className="flex items-center justify-between">
       <span className="text-gray-700">{label}</span>
       {active ? (
-         <div className="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-0.5 rounded text-xs font-bold">
+           <div className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-xs font-bold">
            <FiCheckCircle /> ON
          </div>
       ) : (
@@ -264,13 +263,13 @@ function SettingRow({ label, active }) {
 
 function getCategoryColor(category) {
   const colors = {
-    Onboarding: "bg-blue-500",
-    HR: "bg-purple-500",
-    Finance: "bg-green-500",
-    IT: "bg-amber-500",
+    Onboarding: "bg-cyan-600",
+    HR: "bg-violet-500",
+    Finance: "bg-emerald-500",
+    IT: "bg-sky-600",
     Marketing: "bg-pink-500",
     Sales: "bg-indigo-500",
-    Operations: "bg-cyan-500",
+    Operations: "bg-teal-600",
     "Customer Support": "bg-red-500",
     Legal: "bg-slate-500",
   };

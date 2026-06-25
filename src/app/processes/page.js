@@ -1,45 +1,130 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { processAPI } from "../api/processAPI";
 import {
-  FiX,
-  FiCheckCircle as FiCheck,
-  FiTrash2,
   FiAlertCircle,
-  FiLayers,
-  FiPlus,
-  FiFilter,
-  FiSearch,
-  FiClock,
-  FiUsers,
+  FiBarChart2,
+  FiCheckCircle,
+  FiCloud,
   FiEdit2,
   FiEye,
-  FiTrendingUp,
-  FiBarChart2,
-  FiChevronRight,
+  FiFilter,
   FiGrid,
+  FiLayers,
   FiList,
-  FiMap,
-  FiDownload,
-  FiCopy,
-  FiSettings,
-  FiTag,
-  FiDollarSign,
-  FiZap,
+  FiMoreVertical,
+  FiPlus,
+  FiRefreshCw,
+  FiSearch,
+  FiShield,
+  FiTrash2,
+  FiTrendingUp,
+  FiUserPlus,
+  FiUsers,
 } from "react-icons/fi";
+import { processAPI } from "../api/processAPI";
+import { Avatar, Badge } from "../../components/Badge";
+import { Button } from "../../components/Button";
+import { Card, CardContent } from "../../components/Card";
+
+const STATUS_OPTIONS = [
+  { value: "all", label: "All Status" },
+  { value: "active", label: "Active" },
+  { value: "draft", label: "Draft" },
+  { value: "completed", label: "Completed" },
+  { value: "archived", label: "Archived" },
+];
+
+const statusMeta = {
+  active: {
+    label: "On Schedule",
+    variant: "success",
+    icon: FiCheckCircle,
+    bar: "bg-emerald-500",
+    color: "#10b981",
+    pill: "bg-emerald-100 text-emerald-700",
+  },
+  inprogress: {
+    label: "In Progress",
+    variant: "primary",
+    icon: FiRefreshCw,
+    bar: "bg-cyan-600",
+    color: "#0891b2",
+    pill: "bg-cyan-100 text-cyan-700",
+  },
+  completed: {
+    label: "Completed",
+    variant: "success",
+    icon: FiCheckCircle,
+    bar: "bg-teal-600",
+    color: "#0d9488",
+    pill: "bg-teal-100 text-teal-700",
+  },
+  draft: {
+    label: "Review Required",
+    variant: "warning",
+    icon: FiAlertCircle,
+    bar: "bg-amber-500",
+    color: "#f59e0b",
+    pill: "bg-amber-100 text-amber-700",
+  },
+  archived: {
+    label: "High Priority",
+    variant: "primary",
+    icon: FiLayers,
+    bar: "bg-slate-500",
+    color: "#64748b",
+    pill: "bg-slate-100 text-slate-700",
+  },
+};
+
+const categoryMeta = {
+  Onboarding: {
+    icon: FiUserPlus,
+    tone: "bg-cyan-50 text-cyan-600",
+  },
+  HR: {
+    icon: FiUsers,
+    tone: "bg-violet-50 text-violet-500",
+  },
+  Finance: {
+    icon: FiBarChart2,
+    tone: "bg-emerald-50 text-emerald-500",
+  },
+  IT: {
+    icon: FiCloud,
+    tone: "bg-sky-50 text-sky-600",
+  },
+  Marketing: {
+    icon: FiTrendingUp,
+    tone: "bg-rose-50 text-rose-500",
+  },
+  Sales: {
+    icon: FiTrendingUp,
+    tone: "bg-indigo-50 text-indigo-500",
+  },
+  Operations: {
+    icon: FiCloud,
+    tone: "bg-teal-50 text-teal-600",
+  },
+  "Customer Support": {
+    icon: FiUsers,
+    tone: "bg-red-50 text-red-500",
+  },
+  Legal: {
+    icon: FiShield,
+    tone: "bg-slate-100 text-slate-600",
+  },
+};
 
 export default function ProcessesPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [viewMode, setViewMode] = useState("grid");
-  const [showTimeframe, setShowTimeframe] = useState(false);
-  const [showTags, setShowTags] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [processes, setProcesses] = useState([]);
   const [analytics, setAnalytics] = useState(null);
-
   const [error, setError] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -49,22 +134,24 @@ export default function ProcessesPage() {
 
   useEffect(() => {
     let resolvedRole = "viewer";
-    if (typeof window !== "undefined") {
-      try {
-        const rawRole = localStorage.getItem("role")?.toLowerCase();
-        const userObj = JSON.parse(localStorage.getItem("user") || "{}");
-        
-        if (rawRole && rawRole !== "member") {
-          resolvedRole = rawRole;
-        } else if (userObj && userObj.role && userObj.role.toLowerCase() !== "member") {
-          resolvedRole = userObj.role.toLowerCase();
-          localStorage.setItem("role", resolvedRole);
-        } else if (userObj?.userType?.toLowerCase() === "admin") {
-          resolvedRole = "admin";
-        }
-      } catch (err) {}
-      setUserRole(resolvedRole);
+
+    try {
+      const rawRole = localStorage.getItem("role")?.toLowerCase();
+      const userObj = JSON.parse(localStorage.getItem("user") || "{}");
+
+      if (rawRole && rawRole !== "member") {
+        resolvedRole = rawRole;
+      } else if (userObj?.role && userObj.role.toLowerCase() !== "member") {
+        resolvedRole = userObj.role.toLowerCase();
+        localStorage.setItem("role", resolvedRole);
+      } else if (userObj?.userType?.toLowerCase() === "admin") {
+        resolvedRole = "admin";
+      }
+    } catch (err) {
+      console.error("Failed to resolve process permissions", err);
     }
+
+    setUserRole(resolvedRole);
 
     const fetchProcesses = async (currentRole) => {
       try {
@@ -76,59 +163,58 @@ export default function ProcessesPage() {
         if (filter !== "all") filters.status = filter;
 
         let result;
-        
-        // Senior-Level Role-First Fetching Strategy
+
         if (currentRole === "admin" || currentRole === "superadmin") {
-          // Admins always see everything
           result = await processAPI.getWorkspaceProcesses(filters);
         } else if (currentRole === "editor") {
-          // Editors try to see everything, but fallback gracefully if the workspace is locked
           result = await processAPI.getWorkspaceProcesses(filters);
           if (!result.success && (result.status === 403 || result.status === 401)) {
             result = await processAPI.getAssignedProcesses(filters);
           }
         } else {
-          // Viewers/Members only ever see their assigned processes
           result = await processAPI.getAssignedProcesses(filters);
         }
 
-        if (result.success) {
-          // Store server-side analytics (total, active, avgCompletion, totalSteps)
-          if (result.analytics) setAnalytics(result.analytics);
-          else if (result.count != null) setAnalytics(prev => ({ ...prev, total: result.count }));
+        if (!result.success) {
+          setError(result.error || "Failed to load processes");
+          setProcesses([]);
+          return;
+        }
 
-          const transformedData = (result.data || []).map((process, index) => {
+        setAnalytics((previous) => {
+          if (result.analytics) return result.analytics;
+          if (result.count != null) return { ...previous, total: result.count };
+          return previous;
+        });
+
+        setProcesses(
+          (result.data || []).map((process, index) => {
             const completion = calculateCompletion(process);
-            let displayStatus = process.status || "draft";
-            
-            if (completion === 100) {
-              displayStatus = "completed";
-            }
-            
+            const status = completion === 100 ? "completed" : process.status || "draft";
+
             return {
               id: process._id ?? process.id ?? String(index + 1),
               rawId: process._id || process.id,
-              name: process.name,
-              description: process.description || "",
-              category: process.category,
+              name: process.name || "Untitled process",
+              description: process.description || "No process description yet.",
+              category: process.category || "Operations",
               steps: (process.steps || []).length,
-              status: displayStatus,
+              completedSteps: (process.steps || []).filter(
+                (step) => step.status === "completed",
+              ).length,
+              status,
               visibility: process.visibility || "private",
               lastUpdated: formatDate(process.updatedAt),
-              completion: completion,
+              completion,
               assignees: process.assignees || [],
-              color: getCategoryColor(process.category),
               settings: process.settings,
               createdBy: process.createdBy || null,
+              nextStep: getNextStep(process.steps || []),
             };
-          });
-
-          setProcesses(transformedData);
-        } else {
-          setError(result.error || "Failed to load processes");
-          setProcesses([]);
-        }
+          }),
+        );
       } catch (err) {
+        console.error("Process load error", err);
         setError("An unexpected error occurred. Please refresh the page.");
         setProcesses([]);
       } finally {
@@ -139,534 +225,196 @@ export default function ProcessesPage() {
     fetchProcesses(resolvedRole);
   }, [filter, search]);
 
-  const getStatusBadge = (status) => {
-    switch (status?.toLowerCase()) {
-      case "active":
-      case "inprogress":
-        return "bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center shadow-sm";
-      case "completed":
-        return "bg-emerald-50 text-emerald-700 font-medium border border-emerald-200 inline-flex items-center shadow-sm";
-      case "draft":
-        return "bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center shadow-sm";
-      case "archived":
-        return "bg-slate-50 text-slate-700 border border-slate-200 inline-flex items-center shadow-sm";
-      default:
-        return "bg-gray-50 text-gray-700 border border-gray-200 inline-flex items-center shadow-sm";
-    }
-  };
+  const filteredProcesses = useMemo(
+    () =>
+      processes.filter((process) => {
+        const matchesStatus =
+          filter === "all" || process.status?.toLowerCase() === filter.toLowerCase();
+        const query = search.toLowerCase();
+        const matchesSearch =
+          process.name.toLowerCase().includes(query) ||
+          process.description.toLowerCase().includes(query);
 
-  const getStatusIcon = (status) => {
-    if (status?.toLowerCase() === "completed") {
-      return <FiCheck className="mr-1 h-3 w-3" />;
-    }
-    return null;
-  };
+        return matchesStatus && matchesSearch;
+      }),
+    [filter, processes, search],
+  );
 
-  // Helper function to format date
-  const formatDate = (dateString) => {
-    if (!dateString) return "Never";
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const metrics = useMemo(() => {
+    const localAverage = processes.length
+      ? Math.round(
+          processes.reduce((total, process) => total + process.completion, 0) /
+            processes.length,
+        )
+      : 0;
 
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-    return `${Math.floor(diffDays / 30)} months ago`;
-  };
-
-  // Calculate completion from completed steps vs total steps
-  const calculateCompletion = (process) => {
-    const allSteps = process.steps || [];
-    if (!allSteps.length) return 0;
-    const done = allSteps.filter((s) => s.status === "completed").length;
-    return Math.round((done / allSteps.length) * 100);
-  };
-
-  // Helper function to get category color
-  const getCategoryColor = (category) => {
-    const colors = {
-      Onboarding: "bg-blue-500",
-      HR: "bg-purple-500",
-      Finance: "bg-green-500",
-      IT: "bg-amber-500",
-      Marketing: "bg-pink-500",
-      Sales: "bg-indigo-500",
-      Operations: "bg-cyan-500",
-      "Customer Support": "bg-red-500",
-      Legal: "bg-slate-500",
-    };
-    return colors[category] || "bg-gray-500";
-  };
+    return [
+      {
+        title: "Total Processes",
+        value: analytics?.total ?? processes.length,
+        detail: "+12%",
+        icon: FiLayers,
+        tone: "cyan",
+      },
+      {
+        title: "Active",
+        value:
+          analytics?.active ??
+          processes.filter((process) =>
+            ["active", "inprogress"].includes(process.status?.toLowerCase()),
+          ).length,
+        detail: "+8",
+        icon: FiTrendingUp,
+        tone: "emerald",
+      },
+      {
+        title: "Completed",
+        value:
+          analytics?.completed ??
+          processes.filter((process) => process.status === "completed").length,
+        detail: "This Year",
+        icon: FiCheckCircle,
+        tone: "teal",
+      },
+      {
+        title: "Avg Efficiency",
+        value: `${analytics?.avgCompletion ?? localAverage}%`,
+        detail: "+4%",
+        icon: FiBarChart2,
+        tone: "amber",
+      },
+    ];
+  }, [analytics, processes]);
 
   const handleConfirmDelete = async () => {
     if (!deleteConfirm) return;
+
     setIsDeleting(true);
     const targetId = deleteConfirm.rawId || deleteConfirm.id;
     const result = await processAPI.deleteProcess(targetId);
+
     if (result.success) {
-      setProcesses(processes.filter((p) => (p.rawId || p.id) !== targetId));
+      setProcesses((current) =>
+        current.filter((process) => (process.rawId || process.id) !== targetId),
+      );
       setDeleteConfirm(null);
     } else {
-      setError(result.error);
+      setError(result.error || "Failed to delete process");
     }
+
     setIsDeleting(false);
   };
 
-  const filteredProcesses = processes
-    .filter((process) => {
-      if (filter === "all") return true;
-      return process.status?.toLowerCase() === filter.toLowerCase();
-    })
-    .filter(
-      (process) =>
-        process.name.toLowerCase().includes(search.toLowerCase()) ||
-        process.description.toLowerCase().includes(search.toLowerCase()),
-    );
-
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading processes...</p>
-        </div>
-      </div>
-    );
+    return <ProcessLoadingState />;
   }
 
   return (
-    <div className="py-6 px-6">
-      {/* Error Alert */}
-      {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-          <div className="flex-shrink-0">
-            <FiAlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-medium text-red-900">
-              Error Loading Processes
-            </h3>
-            <p className="text-sm text-red-700 mt-1">{error}</p>
-          </div>
-          <button
-            onClick={() => setError(null)}
-            className="text-red-400 hover:text-red-600"
-          >
-            ×
-          </button>
-        </div>
-      )}
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
+    <div className="-m-4 min-h-[calc(100vh-9rem)] space-y-6 bg-linear-to-br from-slate-50 via-cyan-50 to-emerald-50 p-4 sm:-m-6 sm:p-6">
+      {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
+
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Processes</h1>
-          <p className="text-gray-600 mt-2">
-            {userRole === "admin" 
-              ? "Create and manage your workspace processes" 
-              : "View and edit workflows you have access to"}
+          <h1 className="text-2xl font-black text-[var(--color-text)]">
+            Operational Processes
+          </h1>
+          <p className="mt-1 text-sm font-medium text-[var(--color-muted)]">
+            {canEdit
+              ? "Manage and monitor high-fidelity enterprise workflows."
+              : "Monitor the workflows assigned to you."}
           </p>
         </div>
-        <div className="mt-4 md:mt-0">
-          {canEdit && (
-            <Link
-              href="/processes/new"
-              className="inline-flex items-center px-4 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all duration-200 shadow-lg shadow-amber-500/25"
-            >
-              <FiPlus className="mr-2 h-5 w-5" />
-              Create New Process
-            </Link>
-          )}
-        </div>
+
+        {canEdit && (
+          <Link href="/processes/new">
+            <Button icon={FiPlus}>Create New Process</Button>
+          </Link>
+        )}
       </div>
 
-      {/* Stats — driven by server analytics when available */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-2xl border border-amber-100 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Processes</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">
-                {analytics?.total ?? processes.length}
-              </p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-lg">
-              <FiLayers className="h-6 w-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-amber-100 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Active Processes</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">
-                {analytics?.active ?? processes.filter((p) => p.status === "inprogress").length}
-              </p>
-            </div>
-            <div className="bg-green-100 p-3 rounded-lg">
-              <FiTrendingUp className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-amber-100 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Avg Completion</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">
-                {analytics?.avgCompletion ?? (
-                  processes.length
-                    ? Math.round(
-                        processes.reduce((acc, p) => acc + p.completion, 0) / processes.length,
-                      )
-                    : 0
-                )}%
-              </p>
-            </div>
-            <div className="bg-amber-100 p-3 rounded-lg">
-              <FiBarChart2 className="h-6 w-6 text-amber-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-amber-100 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Steps</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">
-                {analytics?.totalSteps ?? processes.reduce((acc, p) => acc + p.steps, 0)}
-              </p>
-            </div>
-            <div className="bg-purple-100 p-3 rounded-lg">
-              <FiCheck className="h-6 w-6 text-purple-600" />
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {metrics.map((metric) => (
+          <MetricCard key={metric.title} {...metric} />
+        ))}
       </div>
 
-      {/* Search and Filter */}
-      <div className="bg-white rounded-2xl border border-amber-100 p-6 shadow-sm mb-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search processes..."
-                className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+      <Card className="bg-white/90">
+        <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="relative min-w-0 flex-1">
+            <FiSearch
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-faint)]"
+              size={16}
+            />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search processes..."
+              className="app-focus h-10 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] pl-10 pr-4 text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)]"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-sm font-semibold text-[var(--color-muted)]">
+              <FiFilter size={16} />
+              <select
+                value={filter}
+                onChange={(event) => setFilter(event.target.value)}
+                className="app-focus h-10 rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm font-semibold text-[var(--color-text)]"
+              >
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="flex h-10 items-center rounded-lg border border-[var(--color-border)] bg-white p-1">
+              <IconToggle
+                active={viewMode === "grid"}
+                label="Grid view"
+                icon={FiGrid}
+                onClick={() => setViewMode("grid")}
+              />
+              <IconToggle
+                active={viewMode === "list"}
+                label="List view"
+                icon={FiList}
+                onClick={() => setViewMode("list")}
               />
             </div>
           </div>
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <FiFilter className="h-5 w-5 text-gray-400" />
-              <select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                className="border border-gray-300 rounded-lg py-2 px-4 focus:ring-2 focus:ring-amber-500"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="draft">Draft</option>
-                <option value="completed">Completed</option>
-                <option value="archived">Archived</option>
-              </select>
-            </div>
+        </CardContent>
+      </Card>
 
-            <div className="flex items-center space-x-1 border border-gray-300 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`p-2 rounded-md ${viewMode === "grid" ? "bg-amber-100 text-amber-600" : "text-gray-400"}`}
-              >
-                <FiGrid className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`p-2 rounded-md ${viewMode === "list" ? "bg-amber-100 text-amber-600" : "text-gray-400"}`}
-              >
-                <FiList className="h-4 w-4" />
-              </button>
-             
-            </div>
-
-          
-          </div>
-        </div>
-      </div>
-
-      {/* Grid View */}
-      {viewMode === "grid" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {filteredProcesses.length > 0 && viewMode === "grid" && (
+        <div className="grid grid-cols-1 gap-7 md:grid-cols-2 xl:grid-cols-3">
           {filteredProcesses.map((process) => (
-            <div
+            <ProcessCard
               key={process.id}
-              className="bg-white rounded-2xl border border-amber-100 shadow-sm hover:shadow-md transition-all overflow-hidden"
-            >
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div
-                    className={`${process.color} h-12 w-12 rounded-lg flex items-center justify-center`}
-                  >
-                    <FiLayers className="h-6 w-6 text-white" />
-                  </div>
-                  <span
-                    className={`text-xs px-3 py-1 rounded-full capitalize ${getStatusBadge(process.status)}`}
-                  >
-                    {getStatusIcon(process.status)}
-                    {process.status}
-                  </span>
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {process.name}
-                </h3>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                  {process.description}
-                </p>
-                <div className="space-y-3 mb-6">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <FiClock className="h-4 w-4 mr-2" />
-                    <span>Updated: {process.lastUpdated}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <FiUsers className="h-4 w-4 flex-shrink-0" />
-                    <AssigneeStack assignees={process.assignees} />
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <FiLayers className="h-4 w-4 mr-2" />
-                    <span>{process.steps} steps</span>
-                  </div>
-                </div>
-                
-                {/* Creator Info */}
-                <div className="flex items-center gap-2 mb-6 p-2.5 bg-gray-50 rounded-xl border border-gray-100">
-                  <Avatar name={process.createdBy?.name || "User"} />
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight leading-none mb-0.5">Created By</p>
-                    <p className="text-xs font-semibold text-gray-700 truncate">{process.createdBy?.name || "Talha"}</p>
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600">Completion</span>
-                    <span className="font-medium text-gray-900">
-                      {process.completion}%
-                    </span>
-                  </div>
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${process.completion >= 80 ? "bg-green-500" : process.completion >= 50 ? "bg-amber-500" : "bg-blue-500"}`}
-                      style={{ width: `${process.completion}%` }}
-                    ></div>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                  <div className="flex space-x-2">
-                    {process.rawId || process.id ? (
-                      <>
-                        <Link
-                          href={`/processes/${process.rawId || process.id}`}
-                          className="p-2 text-gray-400 hover:text-amber-600"
-                          title="View Process"
-                        >
-                          <FiEye className="h-5 w-5" />
-                        </Link>
-                        {canEdit && (
-                          <Link
-                            href={`/processes/${process.rawId || process.id}/edit`}
-                            className="p-2 text-gray-400 hover:text-blue-600"
-                            title="Edit Process"
-                          >
-                            <FiEdit2 className="h-5 w-5" />
-                          </Link>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-xs text-red-500">ID missing</span>
-                    )}
-                    {canEdit && (
-                      <button
-                        onClick={() => setDeleteConfirm(process)}
-                        className="p-2 text-gray-400 hover:text-red-600 disabled:opacity-50 transition-colors"
-                        disabled={isDeleting}
-                        title="Delete process"
-                      >
-                        <FiTrash2 className="h-5 w-5" />
-                      </button>
-                    )}
-                  </div>
-                  {process.rawId || process.id ? (
-                    canEdit ? (
-                      <Link
-                        href={`/processes/${process.rawId || process.id}/edit`}
-                        className="inline-flex items-center text-sm text-amber-600 hover:text-amber-700 font-medium"
-                      >
-                        Edit
-                        <FiChevronRight className="ml-1 h-4 w-4" />
-                      </Link>
-                    ) : (
-                      <Link
-                        href={`/processes/${process.rawId || process.id}`}
-                        className="inline-flex items-center text-sm text-amber-600 hover:text-amber-700 font-medium"
-                      >
-                        View
-                        <FiChevronRight className="ml-1 h-4 w-4" />
-                      </Link>
-                    )
-                  ) : (
-                    <span className="text-xs text-red-500">ID missing</span>
-                  )}
-                </div>
-              </div>
-            </div>
+              process={process}
+              canEdit={canEdit}
+              onDelete={() => setDeleteConfirm(process)}
+              isDeleting={isDeleting}
+            />
           ))}
         </div>
       )}
 
-      {/* List View */}
-      {viewMode === "list" && (
-        <div className="bg-white rounded-2xl border border-amber-100 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Process
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Steps
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Assigned To
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Completion
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredProcesses.map((process) => (
-                  <tr key={process.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div
-                          className={`${process.color} h-10 w-10 rounded-lg flex items-center justify-center mr-3`}
-                        >
-                          <FiLayers className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {process.name}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {process.description.substring(0, 50)}...
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`text-xs px-3 py-1 rounded-full capitalize ${getStatusBadge(process.status)}`}
-                      >
-                        {getStatusIcon(process.status)}
-                        {process.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {process.steps} steps
-                    </td>
-                    <td className="px-6 py-4">
-                      <AssigneeStack assignees={process.assignees} />
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="w-32">
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-600">
-                            {process.completion}%
-                          </span>
-                        </div>
-                        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full ${process.completion >= 80 ? "bg-green-500" : process.completion >= 50 ? "bg-amber-500" : "bg-blue-500"}`}
-                            style={{ width: `${process.completion}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex space-x-2">
-                        <Link
-                          href={`/processes/${process.rawId || process.id}`}
-                          className="p-2 text-gray-400 hover:text-amber-600"
-                          title="View Process"
-                        >
-                          <FiEye className="h-5 w-5" />
-                        </Link>
-                        {canEdit && (
-                          <>
-                            <Link
-                              href={`/processes/${process.rawId || process.id}/edit`}
-                              className="p-2 text-gray-400 hover:text-blue-600"
-                              title="Edit Process"
-                            >
-                              <FiEdit2 className="h-5 w-5" />
-                            </Link>
-                            <button
-                              onClick={() => setDeleteConfirm(process)}
-                              className="p-2 text-gray-400 hover:text-red-600 disabled:opacity-50 transition-colors"
-                              disabled={isDeleting}
-                              title="Delete process"
-                            >
-                              <FiTrash2 className="h-5 w-5" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      {filteredProcesses.length > 0 && viewMode === "list" && (
+        <ProcessTable
+          processes={filteredProcesses}
+          canEdit={canEdit}
+          onDelete={setDeleteConfirm}
+          isDeleting={isDeleting}
+        />
       )}
 
-     
-
-      {filteredProcesses.length === 0 && !isLoading && (
-        <div className="text-center py-12">
-          <div className="bg-amber-50 rounded-full p-6 w-fit mx-auto mb-4">
-            <FiLayers className="h-12 w-12 text-amber-500" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            No processes found
-          </h3>
-          <p className="text-gray-600 mb-6">
-            {canEdit ? "Create your first process to get started" : "No processes are currently available."}
-          </p>
-          {canEdit && (
-            <Link
-              href="/processes/new"
-              className="inline-flex items-center px-6 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
-            >
-              <FiPlus className="mr-2 h-5 w-5" />
-              Create New Process
-            </Link>
-          )}
-        </div>
+      {filteredProcesses.length === 0 && (
+        <EmptyState canEdit={canEdit} search={search} />
       )}
-      {/* Delete Confirmation Modal */}
+
       {deleteConfirm && (
         <DeleteProcessModal
           process={deleteConfirm}
@@ -679,127 +427,495 @@ export default function ProcessesPage() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// UI Components
-// ─────────────────────────────────────────────────────────────────────────────
+function MetricCard({ title, value, detail, icon: Icon, tone }) {
+  const toneMap = {
+    cyan: "bg-cyan-50 text-cyan-700",
+    emerald: "bg-emerald-50 text-emerald-700",
+    teal: "bg-teal-50 text-teal-700",
+    amber: "bg-amber-50 text-amber-700",
+  };
 
-function DeleteProcessModal({ process, loading, onClose, onConfirm }) {
   return (
-    <ModalShell title="Delete Process" onClose={onClose} accentFrom="from-red-500" accentTo="to-red-600">
-      <div className="p-6 text-center">
-        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-          <FiAlertCircle className="h-8 w-8" />
+    <Card className="min-h-[116px]">
+      <CardContent>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-bold uppercase text-[var(--color-muted)]">
+              {title}
+            </p>
+            <p className="mt-3 text-2xl font-black text-[var(--color-text)]">
+              {value}
+            </p>
+          </div>
+          <div className={`rounded-lg p-2.5 ${toneMap[tone]}`}>
+            <Icon size={17} />
+          </div>
         </div>
-        <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Process?</h3>
-        <p className="text-gray-600 mb-8 max-w-sm mx-auto">
-          Are you sure you want to delete <span className="font-semibold">"{process.name}"</span>? This action cannot be undone.
+        <p className="mt-2 text-right text-[10px] font-bold text-[var(--color-muted)]">
+          {detail}
         </p>
-
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="flex-1 py-2.5 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium transition-colors disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={loading}
-            className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium transition-all flex items-center justify-center gap-2 shadow-md shadow-red-500/20"
-          >
-            {loading ? (
-              <><Spinner size="h-4 w-4" cls="border-white" /> Deleting...</>
-            ) : (
-              <><FiTrash2 className="h-4 w-4" /> Delete Process</>
-            )}
-          </button>
-        </div>
-      </div>
-    </ModalShell>
+      </CardContent>
+    </Card>
   );
 }
 
-function ModalShell({ title, accentFrom, accentTo, onClose, children }) {
-  useEffect(() => {
-    const handler = (e) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
+function ProcessCard({ process, canEdit, onDelete, isDeleting }) {
+  const meta = statusMeta[process.status?.toLowerCase()] || statusMeta.draft;
+  const StatusIcon = meta.icon;
+  const category =
+    categoryMeta[process.category] || categoryMeta.Operations;
+  const CategoryIcon = category.icon;
+  const targetId = process.rawId || process.id;
+  const totalStages = Math.max(process.steps, 1);
+  const currentStage =
+    process.completion === 100
+      ? totalStages
+      : Math.min(process.completedSteps + 1, totalStages);
+  const stageLabel = `${currentStage}/${totalStages}`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/55 backdrop-blur-sm shadow-inner" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div className={`bg-gradient-to-r ${accentFrom} ${accentTo} px-6 py-4 flex items-center justify-between`}>
-          <h2 className="text-white font-bold">{title}</h2>
-          <button onClick={onClose} className="text-white/75 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
-            <FiX className="h-5 w-5" />
-          </button>
+    <Card hover className="min-h-[300px] border-white/70 bg-white/90 shadow-[0_18px_45px_rgba(15,118,110,0.08)]">
+      <CardContent className="flex h-full flex-col px-6 py-6">
+        <div className="mb-7 flex items-start justify-between gap-3">
+          <div
+            className={`flex h-10 w-10 items-center justify-center rounded-lg ${category.tone}`}
+          >
+            <CategoryIcon size={19} />
+          </div>
+          <Badge
+            variant={meta.variant}
+            size="sm"
+            className={`rounded px-2.5 py-1 text-[9px] uppercase ${meta.pill}`}
+          >
+            <StatusIcon className="mr-1" size={12} />
+            {meta.label}
+          </Badge>
         </div>
-        {children}
+
+        <div className="min-h-[64px]">
+          <h2 className="line-clamp-1 text-sm font-semibold text-[var(--color-text)]">
+            {process.name}
+          </h2>
+          <p className="mt-1 line-clamp-1 text-xs font-medium text-[var(--color-muted)]">
+            {process.description}
+          </p>
+        </div>
+
+        <div className="mt-3 flex items-center gap-5">
+          <CircularProgress value={process.completion} color={meta.color} />
+
+          <div className="min-w-0 flex-1">
+            <div className="mb-1.5 flex items-end justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[9px] font-bold text-[var(--color-muted)]">
+                  Next Step:{" "}
+                  <span className="font-semibold text-slate-500">
+                    {process.nextStep}
+                  </span>
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-[9px] font-bold text-[var(--color-text)]">
+                  Stage
+                </p>
+                <p className="text-[9px] font-black text-[var(--color-text)]">
+                  {stageLabel}
+                </p>
+              </div>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className={`h-full rounded-full ${meta.bar}`}
+                style={{ width: `${process.completion}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-auto flex items-center justify-between pt-8">
+          <AssigneeStack assignees={process.assignees} />
+          <ActionCluster
+            targetId={targetId}
+            canEdit={canEdit}
+            onDelete={onDelete}
+            isDeleting={isDeleting}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ProcessTable({ processes, canEdit, onDelete, isDeleting }) {
+  return (
+    <Card>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-[var(--color-border)]">
+          <thead className="bg-[var(--color-surface-hover)]">
+            <tr>
+              {["Process", "Status", "Steps", "Assigned", "Progress", "Actions"].map(
+                (heading) => (
+                  <th
+                    key={heading}
+                    className="px-5 py-3 text-left text-[10px] font-black uppercase text-[var(--color-muted)]"
+                  >
+                    {heading}
+                  </th>
+                ),
+              )}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--color-border)] bg-white">
+            {processes.map((process) => {
+              const meta =
+                statusMeta[process.status?.toLowerCase()] || statusMeta.draft;
+              const StatusIcon = meta.icon;
+              const targetId = process.rawId || process.id;
+
+              return (
+                <tr key={process.id} className="hover:bg-[var(--color-surface-hover)]">
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-50 text-cyan-700">
+                        <FiLayers size={18} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black text-[var(--color-text)]">
+                          {process.name}
+                        </p>
+                        <p className="truncate text-xs font-medium text-[var(--color-muted)]">
+                          {process.description}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-5 py-4">
+                      <Badge
+                        variant={meta.variant}
+                        size="sm"
+                        className={`rounded px-2.5 py-1 text-[9px] uppercase ${meta.pill}`}
+                      >
+                        <StatusIcon className="mr-1" size={12} />
+                        {meta.label}
+                      </Badge>
+                  </td>
+                  <td className="px-5 py-4 text-sm font-semibold text-[var(--color-muted)]">
+                    {process.steps}
+                  </td>
+                  <td className="px-5 py-4">
+                    <AssigneeStack assignees={process.assignees} />
+                  </td>
+                  <td className="px-5 py-4">
+                    <div className="w-32">
+                      <div className="mb-1 text-xs font-bold text-[var(--color-text)]">
+                        {process.completion}%
+                      </div>
+                      <div className="h-2 rounded-full bg-[var(--color-bg-soft)]">
+                        <div
+                          className={`h-full rounded-full ${meta.bar}`}
+                          style={{ width: `${process.completion}%` }}
+                        />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-5 py-4">
+                    <ActionCluster
+                      targetId={targetId}
+                      canEdit={canEdit}
+                      onDelete={() => onDelete(process)}
+                      isDeleting={isDeleting}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
+    </Card>
+  );
+}
+
+function ActionCluster({ targetId, canEdit, onDelete, isDeleting }) {
+  if (!targetId) {
+    return <span className="text-xs font-semibold text-red-500">ID missing</span>;
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <IconLink href={`/processes/${targetId}`} label="View process" icon={FiEye} />
+      {canEdit && (
+        <>
+          <IconLink
+            href={`/processes/${targetId}/edit`}
+            label="Edit process"
+            icon={FiEdit2}
+          />
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={isDeleting}
+            className="app-focus flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-muted)] hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+            aria-label="Delete process"
+            title="Delete process"
+          >
+            <FiTrash2 size={15} />
+          </button>
+        </>
+      )}
+      <FiMoreVertical size={15} className="text-[var(--color-faint)]" />
     </div>
   );
 }
 
-function Spinner({ size = "h-5 w-5", cls = "border-amber-500" }) {
-  return (
-    <div className={`${size} animate-spin rounded-full border-2 ${cls} border-t-transparent`} />
-  );
-}
-
-function Avatar({ name = "", size = "h-8 w-8", textCls = "text-[10px]" }) {
-  // Simple hash for consistent colors
-  const colors = ["bg-amber-500", "bg-blue-500", "bg-emerald-500", "bg-rose-500", "bg-indigo-500", "bg-purple-500"];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  const color = colors[Math.abs(hash) % colors.length];
+function CircularProgress({ value, color }) {
+  const radius = 18;
+  const circumference = 2 * Math.PI * radius;
+  const safeValue = Math.min(100, Math.max(0, Number(value) || 0));
+  const offset = circumference - (safeValue / 100) * circumference;
 
   return (
-    <div className={`${size} ${color} rounded-full flex items-center justify-center flex-shrink-0 border-2 border-white shadow-sm`}>
-      <span className={`text-white font-bold leading-none ${textCls}`}>
-        {name?.charAt(0)?.toUpperCase() || "?"}
+    <div className="relative flex h-12 w-12 shrink-0 items-center justify-center">
+      <svg className="h-12 w-12 -rotate-90" viewBox="0 0 48 48" aria-hidden="true">
+        <circle
+          cx="24"
+          cy="24"
+          r={radius}
+          fill="none"
+          stroke="#e2e8f0"
+          strokeWidth="4"
+        />
+        <circle
+          cx="24"
+          cy="24"
+          r={radius}
+          fill="none"
+          stroke={color}
+          strokeLinecap="round"
+          strokeWidth="4"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+        />
+      </svg>
+      <span className="absolute text-[9px] font-black text-[var(--color-text)]">
+        {safeValue}%
       </span>
     </div>
   );
 }
 
-/**
- * Shows an avatar stack for assignment display.
- * Handles: populated objects ({ _id, name }), raw strings (IDs), and empty arrays.
- */
+function IconLink({ href, label, icon: Icon }) {
+  return (
+    <Link
+      href={href}
+      className="app-focus flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-primary)]"
+      aria-label={label}
+      title={label}
+    >
+      <Icon size={15} />
+    </Link>
+  );
+}
+
+function IconToggle({ active, label, icon: Icon, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className={`app-focus flex h-8 w-8 items-center justify-center rounded-md transition ${
+        active
+          ? "bg-cyan-50 text-cyan-700"
+          : "text-[var(--color-muted)] hover:text-[var(--color-text)]"
+      }`}
+    >
+      <Icon size={16} />
+    </button>
+  );
+}
+
 function AssigneeStack({ assignees = [], max = 3 }) {
   if (!assignees.length) {
-    return <span className="text-gray-400 italic text-xs">Unassigned</span>;
+    return (
+      <span className="flex items-center gap-2 text-xs font-semibold text-[var(--color-muted)]">
+        <FiUsers size={14} />
+        Unassigned
+      </span>
+    );
   }
 
   const visible = assignees.slice(0, max);
   const overflow = assignees.length - max;
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-2">
       <div className="flex -space-x-2">
-        {visible.map((a, i) => {
-          const name = typeof a === "string" ? "?" : a.name || a.email || "?";
+        {visible.map((assignee, index) => {
+          const name =
+            typeof assignee === "string"
+              ? "User"
+              : assignee.name || assignee.email || "User";
+
           return (
-            <div key={a._id || a.id || i} title={name}>
-              <Avatar name={name} size="h-6 w-6" textCls="text-[9px]" />
-            </div>
+            <Avatar
+              key={assignee._id || assignee.id || `${name}-${index}`}
+              name={name}
+              src={assignee.profilePicture}
+              size="sm"
+            />
           );
         })}
       </div>
       {overflow > 0 && (
-        <span className="text-xs text-gray-500 font-medium">+{overflow}</span>
-      )}
-      {assignees.length === 1 && (
-        <span className="text-xs text-gray-600 truncate max-w-[120px]">
-          {typeof assignees[0] === "string"
-            ? assignees[0]
-            : assignees[0].name || assignees[0].email}
+        <span className="text-xs font-bold text-[var(--color-muted)]">
+          +{overflow}
         </span>
       )}
     </div>
   );
 }
 
+function ErrorAlert({ message, onDismiss }) {
+  return (
+    <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
+      <FiAlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+      <div className="flex-1">
+        <h3 className="text-sm font-black text-red-900">Error Loading Processes</h3>
+        <p className="mt-1 text-sm font-medium text-red-700">{message}</p>
+      </div>
+      <button
+        type="button"
+        onClick={onDismiss}
+        className="app-focus rounded-md px-2 text-lg leading-none text-red-500 hover:bg-red-100"
+        aria-label="Dismiss error"
+      >
+        x
+      </button>
+    </div>
+  );
+}
+
+function EmptyState({ canEdit, search }) {
+  return (
+    <Card>
+      <CardContent className="flex min-h-[280px] flex-col items-center justify-center text-center">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-cyan-50 text-cyan-700">
+          <FiLayers size={24} />
+        </div>
+        <h3 className="text-lg font-black text-[var(--color-text)]">
+          No processes found
+        </h3>
+        <p className="mt-2 max-w-md text-sm font-medium text-[var(--color-muted)]">
+          {search
+            ? "Try another search term or clear the current filters."
+            : canEdit
+              ? "Create your first operational workflow to start tracking progress."
+              : "No assigned processes are currently available."}
+        </p>
+        {canEdit && (
+          <Link href="/processes/new" className="mt-5">
+            <Button icon={FiPlus}>Create New Process</Button>
+          </Link>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function DeleteProcessModal({ process, loading, onClose, onConfirm }) {
+  useEffect(() => {
+    const handler = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label="Close delete dialog"
+        className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <Card className="relative w-full max-w-md shadow-[var(--shadow-popover)]">
+        <CardContent className="text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-red-50 text-red-600">
+            <FiAlertCircle size={26} />
+          </div>
+          <h2 className="text-xl font-black text-[var(--color-text)]">
+            Delete Process?
+          </h2>
+          <p className="mx-auto mt-2 max-w-sm text-sm font-medium text-[var(--color-muted)]">
+            Are you sure you want to delete{" "}
+            <span className="font-bold text-[var(--color-text)]">{process.name}</span>?
+            This action cannot be undone.
+          </p>
+          <div className="mt-6 flex gap-3">
+            <Button
+              variant="outline"
+              fullWidth
+              onClick={onClose}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              fullWidth
+              onClick={onConfirm}
+              loading={loading}
+              icon={FiTrash2}
+            >
+              Delete
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ProcessLoadingState() {
+  return (
+    <div className="flex min-h-[60vh] flex-col items-center justify-center">
+      <div className="mb-4 h-11 w-11 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-primary)]" />
+      <p className="text-sm font-semibold text-[var(--color-muted)]">
+        Loading operational processes...
+      </p>
+    </div>
+  );
+}
+
+function formatDate(dateString) {
+  if (!dateString) return "Never";
+
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = Math.abs(now - date);
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  return `${Math.floor(diffDays / 30)} months ago`;
+}
+
+function calculateCompletion(process) {
+  const allSteps = process.steps || [];
+  if (!allSteps.length) return 0;
+
+  const done = allSteps.filter((step) => step.status === "completed").length;
+  return Math.round((done / allSteps.length) * 100);
+}
+
+function getNextStep(steps) {
+  const nextStep =
+    steps.find((step) => step.status !== "completed") || steps[steps.length - 1];
+
+  return nextStep?.title || nextStep?.name || "Final Sign-off";
+}
