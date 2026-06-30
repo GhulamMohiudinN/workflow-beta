@@ -3,21 +3,18 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
-  FiLayers,
-  FiClock,
-  FiCheckCircle,
-  FiTrendingUp,
-  FiArrowRight,
-  FiAlertCircle,
-  FiRefreshCw,
+  FiLayers, FiClock, FiCheckCircle, FiTrendingUp, FiArrowRight,
+  FiAlertCircle, FiRefreshCw, FiZap,
 } from "react-icons/fi";
 import { processAPI } from "../../api/processAPI";
+import { Card, CardContent, CardHeader } from "../../../components/Card";
+import { Button } from "../../../components/Button";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function formatTimeAgo(dateString) {
-  if (!dateString) return "—";
-  const diff = Date.now() - new Date(dateString).getTime();
+function formatTimeAgo(iso) {
+  if (!iso) return "—";
+  const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff / 60000);
   if (m < 1) return "Just now";
   if (m < 60) return `${m}m ago`;
@@ -34,27 +31,50 @@ function calcProgress(steps = []) {
   return Math.round((done / steps.length) * 100);
 }
 
-function getStatusColor(status) {
+function statusVariant(status) {
   switch (status) {
-    case "completed": return "bg-green-100 text-green-800";
+    case "completed": return "bg-emerald-100 text-emerald-800";
     case "active":    return "bg-blue-100 text-blue-800";
-    case "pending":   return "bg-yellow-100 text-yellow-800";
-    case "draft":     return "bg-gray-100 text-gray-600";
-    default:          return "bg-gray-100 text-gray-800";
+    case "pending":   return "bg-amber-100 text-amber-800";
+    default:          return "bg-slate-100 text-slate-600";
   }
 }
 
-// ─── Skeleton card ───────────────────────────────────────────────────────────
+// ─── Skeleton ────────────────────────────────────────────────────────────────
 
-function SkeletonCard() {
+function StatSkeleton() {
   return (
-    <div className="bg-white rounded-2xl border border-amber-100 p-6 shadow-sm animate-pulse">
-      <div className="flex items-center justify-between mb-3">
-        <div className="w-12 h-12 rounded-lg bg-gray-200" />
-        <div className="w-10 h-8 rounded bg-gray-200" />
-      </div>
-      <div className="w-32 h-4 rounded bg-gray-200" />
-    </div>
+    <Card className="min-h-[116px] animate-pulse">
+      <CardContent>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-3">
+            <div className="w-24 h-2.5 rounded bg-[var(--color-border)]" />
+            <div className="w-12 h-7 rounded bg-[var(--color-border)]" />
+          </div>
+          <div className="w-10 h-10 rounded-lg bg-[var(--color-border)]" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+
+function StatCard({ label, value, icon: Icon, toneClass }) {
+  return (
+    <Card className="min-h-[116px]">
+      <CardContent>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-black uppercase text-[var(--color-muted)]">{label}</p>
+            <p className="mt-3 text-2xl font-black text-[var(--color-text)]">{value}</p>
+          </div>
+          <div className={`rounded-lg p-2.5 ${toneClass}`}>
+            <Icon size={17} />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -63,195 +83,156 @@ function SkeletonCard() {
 export default function UserDashboard() {
   const [processes, setProcesses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [user, setUser] = useState(null);
+  const [error, setError]         = useState(null);
+  const [user, setUser]           = useState(null);
 
   const loadData = async () => {
-    setIsLoading(true);
-    setError(null);
+    setIsLoading(true); setError(null);
     try {
-      // Read user from localStorage (set at login)
       const storedUser = localStorage.getItem("user");
       if (storedUser) setUser(JSON.parse(storedUser));
-
       const result = await processAPI.getAssignedProcesses();
       if (result.success) {
-        const list = Array.isArray(result.data) ? result.data : [];
-        setProcesses(list);
+        setProcesses(Array.isArray(result.data) ? result.data : []);
       } else {
         setError(result.error || "Failed to load your processes.");
       }
-    } catch (err) {
+    } catch {
       setError("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
-  // ── Derived stats ────────────────────────────────────────────────────────
-  const totalAssigned = processes.length;
-  const allSteps      = processes.flatMap((p) => p.steps || []);
+  const totalAssigned  = processes.length;
+  const allSteps       = processes.flatMap((p) => p.steps || []);
   const completedSteps = allSteps.filter((s) => s.status === "completed").length;
   const pendingSteps   = allSteps.filter((s) => s.status !== "completed").length;
   const recentProcesses = processes.slice(0, 4);
 
-  // ── Loading skeleton ─────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div>
-        <div className="mb-8">
-          <div className="w-56 h-8 rounded bg-gray-200 animate-pulse mb-2" />
-          <div className="w-80 h-4 rounded bg-gray-100 animate-pulse" />
+      <div className="space-y-6">
+        <div className="mb-2">
+          <div className="w-56 h-7 rounded bg-[var(--color-border)] animate-pulse mb-2" />
+          <div className="w-80 h-4 rounded bg-[var(--color-border)] animate-pulse" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <SkeletonCard /><SkeletonCard /><SkeletonCard />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatSkeleton /><StatSkeleton /><StatSkeleton />
         </div>
-        <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-6 animate-pulse">
-          {[1,2,3,4].map(i => (
-            <div key={i} className="flex items-center gap-4 py-4 border-b border-gray-100 last:border-0">
-              <div className="flex-1 space-y-2">
-                <div className="w-48 h-4 rounded bg-gray-200" />
-                <div className="w-32 h-3 rounded bg-gray-100" />
+        <Card className="animate-pulse">
+          <CardContent className="space-y-4">
+            {[1,2,3,4].map(i => (
+              <div key={i} className="flex items-center gap-4 py-3 border-b border-[var(--color-border)] last:border-0">
+                <div className="flex-1 space-y-2">
+                  <div className="w-48 h-4 rounded bg-[var(--color-border)]" />
+                  <div className="w-32 h-3 rounded bg-[var(--color-border)]" />
+                </div>
+                <div className="w-24 h-2 rounded bg-[var(--color-border)]" />
               </div>
-              <div className="w-24 h-2 rounded bg-gray-200" />
-            </div>
-          ))}
-        </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  // ── Error state ──────────────────────────────────────────────────────────
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] text-center px-4">
-        <div className="bg-red-50 rounded-2xl p-8 border border-red-100 max-w-md w-full">
-          <FiAlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-lg font-bold text-gray-900 mb-2">Could not load dashboard</h2>
-          <p className="text-sm text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={loadData}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-medium transition-colors"
-          >
-            <FiRefreshCw className="h-4 w-4" /> Try Again
-          </button>
-        </div>
+        <Card className="max-w-md w-full">
+          <CardContent className="py-10 flex flex-col items-center">
+            <FiAlertCircle className="h-12 w-12 text-[var(--color-danger)] mb-4" />
+            <h2 className="text-lg font-black text-[var(--color-text)] mb-2">Could not load dashboard</h2>
+            <p className="text-sm text-[var(--color-muted)] mb-6">{error}</p>
+            <Button onClick={loadData} icon={FiRefreshCw}>Try Again</Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  // ── Main render ──────────────────────────────────────────────────────────
   return (
-    <div>
+    <div className="space-y-6">
       {/* Welcome */}
-      <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-          Welcome back, {user?.name?.split(" ")[0] || "there"}! 👋
+      <div>
+        <h1 className="text-2xl font-black text-[var(--color-text)]">
+          Welcome back, {user?.name?.split(" ")[0] || "there"} 👋
         </h1>
-        <p className="text-gray-600 mt-2">Here&apos;s an overview of your assigned workflows</p>
+        <p className="mt-1 text-sm font-medium text-[var(--color-muted)]">
+          Here&apos;s an overview of your assigned workflows.
+        </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-2xl border border-amber-100 p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-3">
-            <div className="bg-blue-100 p-3 rounded-lg">
-              <FiLayers className="h-6 w-6 text-blue-600" />
-            </div>
-            <span className="text-3xl font-bold text-gray-900">{totalAssigned}</span>
-          </div>
-          <p className="text-gray-600 font-medium">Assigned Processes</p>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-amber-100 p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-3">
-            <div className="bg-green-100 p-3 rounded-lg">
-              <FiCheckCircle className="h-6 w-6 text-green-600" />
-            </div>
-            <span className="text-3xl font-bold text-gray-900">{completedSteps}</span>
-          </div>
-          <p className="text-gray-600 font-medium">Completed Steps</p>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-amber-100 p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-3">
-            <div className="bg-yellow-100 p-3 rounded-lg">
-              <FiClock className="h-6 w-6 text-yellow-600" />
-            </div>
-            <span className="text-3xl font-bold text-gray-900">{pendingSteps}</span>
-          </div>
-          <p className="text-gray-600 font-medium">Pending Steps</p>
-        </div>
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard label="Assigned Processes" value={totalAssigned}  icon={FiLayers}      toneClass="bg-blue-50 text-blue-600" />
+        <StatCard label="Completed Steps"    value={completedSteps} icon={FiCheckCircle} toneClass="bg-emerald-50 text-emerald-600" />
+        <StatCard label="Pending Steps"      value={pendingSteps}   icon={FiClock}       toneClass="bg-amber-50 text-amber-600" />
       </div>
 
       {/* Recent Processes */}
-      <div className="bg-white rounded-2xl border border-amber-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-amber-100 flex items-center justify-between">
+      <Card>
+        <CardHeader className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">My Recent Processes</h2>
-            <p className="text-sm text-gray-500 mt-0.5">Processes you&apos;re assigned to or have worked on</p>
+            <h2 className="text-sm font-black text-[var(--color-text)]">My Recent Processes</h2>
+            <p className="text-xs font-medium text-[var(--color-muted)] mt-0.5">Workflows you&apos;re assigned to</p>
           </div>
           {processes.length > 4 && (
-            <Link
-              href="/users/processesUsers"
-              className="text-sm text-amber-600 hover:text-amber-700 font-medium"
-            >
+            <Link href="/users/processesUsers" className="text-xs font-bold text-[var(--color-primary)] hover:underline">
               View all
             </Link>
           )}
-        </div>
+        </CardHeader>
 
         {recentProcesses.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center px-6">
-            <div className="bg-amber-50 rounded-full p-6 w-fit mx-auto mb-4">
-              <FiLayers className="h-10 w-10 text-amber-400" />
+          <CardContent className="flex flex-col items-center justify-center py-14 text-center">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 text-[var(--color-primary)]">
+              <FiLayers size={22} />
             </div>
-            <h3 className="text-base font-semibold text-gray-900 mb-1">No processes assigned yet</h3>
-            <p className="text-sm text-gray-500">Contact your workspace admin to get started.</p>
-          </div>
+            <h3 className="text-sm font-black text-[var(--color-text)] mb-1">No processes assigned yet</h3>
+            <p className="text-xs text-[var(--color-muted)]">Contact your workspace admin to get started.</p>
+          </CardContent>
         ) : (
           <>
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-[var(--color-border)]">
               {recentProcesses.map((process) => {
                 const progress = calcProgress(process.steps || []);
                 const pid = process._id || process.id;
                 return (
-                  <div key={pid} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div key={pid} className="px-5 py-4 hover:bg-[var(--color-surface-hover)] transition-colors">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-1">
-                          <h3 className="font-semibold text-gray-900 truncate">{process.name}</h3>
-                          <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium flex-shrink-0 ${getStatusColor(process.status)}`}>
+                        <div className="flex items-center gap-2.5 mb-1">
+                          <h3 className="font-black text-sm text-[var(--color-text)] truncate">{process.name}</h3>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold flex-shrink-0 ${statusVariant(process.status)}`}>
                             {process.status || "active"}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-xs text-[var(--color-muted)]">
                           Updated: {formatTimeAgo(process.updatedAt)}
                         </p>
                       </div>
                       <div className="flex items-center gap-4 flex-shrink-0">
-                        <div className="w-32">
-                          <div className="flex justify-between text-xs mb-1">
-                            <span className="text-gray-500">Progress</span>
-                            <span className="font-semibold text-gray-700">{progress}%</span>
+                        <div className="w-28">
+                          <div className="flex justify-between text-[10px] mb-1">
+                            <span className="text-[var(--color-muted)] font-semibold">Progress</span>
+                            <span className="font-black text-[var(--color-text)]">{progress}%</span>
                           </div>
-                          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                          <div className="h-1.5 bg-[var(--color-bg-soft)] rounded-full overflow-hidden">
                             <div
-                              className={`h-full rounded-full transition-all duration-500 ${progress === 100 ? "bg-green-500" : "bg-amber-500"}`}
+                              className={`h-full rounded-full transition-all duration-500 ${progress === 100 ? "bg-[var(--color-success)]" : "bg-[var(--color-primary)]"}`}
                               style={{ width: `${progress}%` }}
                             />
                           </div>
                         </div>
                         <Link
                           href={`/users/processesUsers/${pid}`}
-                          className="inline-flex items-center text-amber-600 hover:text-amber-700 text-sm font-medium"
+                          className="inline-flex items-center gap-1 text-xs font-bold text-[var(--color-primary)] hover:underline"
                         >
-                          View
-                          <FiArrowRight className="ml-1 h-4 w-4" />
+                          View <FiArrowRight className="h-3.5 w-3.5" />
                         </Link>
                       </div>
                     </div>
@@ -259,35 +240,35 @@ export default function UserDashboard() {
                 );
               })}
             </div>
-
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+            <div className="px-5 py-3 bg-[var(--color-surface-hover)] border-t border-[var(--color-border)]">
               <Link
                 href="/users/processesUsers"
-                className="text-amber-600 hover:text-amber-700 text-sm font-medium flex items-center"
+                className="text-xs font-bold text-[var(--color-primary)] flex items-center gap-1 hover:underline"
               >
-                View all processes
-                <FiArrowRight className="ml-1 h-4 w-4" />
+                View all processes <FiArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
           </>
         )}
-      </div>
+      </Card>
 
-      {/* Quick Tip */}
-      <div className="mt-8 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-200">
-        <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-            <FiTrendingUp className="h-5 w-5 text-amber-600" />
+      {/* Help tip */}
+      <Card>
+        <CardContent>
+          <div className="flex items-start gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-[var(--color-primary)]">
+              <FiZap size={18} />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-[var(--color-text)]">Need Help?</h3>
+              <p className="text-xs text-[var(--color-muted)] mt-1">
+                Click on any process to view its details and complete your assigned tasks.
+                If you need assistance, contact your workspace admin.
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">Need Help?</h3>
-            <p className="text-gray-600 text-sm mt-1">
-              Click on any process to view details and complete your assigned tasks.
-              If you need assistance, contact your workspace admin.
-            </p>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

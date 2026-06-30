@@ -2,101 +2,92 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { 
-  FiHome, 
-  FiLayers, 
-  FiUser, 
-  FiLogOut,
-  FiMenu,
-  FiX,
-  FiBell,
-  FiSearch,
-  FiSettings
-} from "react-icons/fi";
-import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
 import {
-  FiBriefcase
+  FiHome, FiLayers, FiUser, FiLogOut, FiMenu, FiX, FiBell,
+  FiGrid, FiChevronRight,
 } from "react-icons/fi";
-import { useRouter } from 'next/navigation';
+import { FiBriefcase } from "react-icons/fi";
 
 export default function UserLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMounted, setIsMounted]     = useState(false);
+  const [user, setUser]               = useState(null);
+  const [role, setRole]               = useState(null);
   const pathname = usePathname();
-  const router = useRouter();
-
-  const isBrowser = typeof window !== "undefined";
-  const storedUserString = isBrowser ? localStorage.getItem("user") : null;
-  const storedRole = isBrowser ? localStorage.getItem("role") : null;
-
-  const user = storedUserString ? JSON.parse(storedUserString) : null;
+  const router   = useRouter();
 
   useEffect(() => {
-    if (!isBrowser) return;
-    if (!storedUserString || !storedRole) {
+    setIsMounted(true);
+    try {
+      const storedUser = localStorage.getItem("user");
+      const storedRole = localStorage.getItem("role");
+      if (!storedUser || !storedRole) { router.push("/login"); return; }
+      const r = storedRole?.toLowerCase();
+      if (r === "admin" || r === "superadmin" || r === "editor") {
+        router.push("/dashboard"); return;
+      }
+      setUser(JSON.parse(storedUser));
+      setRole(storedRole);
+    } catch {
       router.push("/login");
-      return;
     }
-    if (storedRole === "admin" || storedRole === "superadmin" || storedRole === "editor") {
-      // High-level roles should use the main dashboard route
-      router.push("/dashboard");
-    }
-  }, [isBrowser, storedUserString, storedRole, router]);
+  }, [router]);
 
-  if (!isBrowser) {
-    return null;
-  }
-
-  if (!storedUserString || !storedRole || storedRole === "admin" || storedRole === "superadmin" || storedRole === "editor") {
-    return null;
-  }
+  if (!isMounted || !user || !role) return null;
 
   const navigation = [
-    { name: "Dashboard", href: "/users/dashboardUsers", icon: FiHome },
-    { name: "Processes", href: "/users/processesUsers", icon: FiLayers },
-    { name: "My Profile", href: "/users/profile", icon: FiUser },
+    { name: "Dashboard",  href: "/users/dashboardUsers",  icon: FiGrid },
+    { name: "Processes",  href: "/users/processesUsers",  icon: FiLayers },
+    { name: "My Profile", href: "/users/profile",         icon: FiUser },
   ];
 
   const isActive = (href) => pathname === href || pathname.startsWith(href + "/");
 
+  const handleSignOut = () => {
+    ["user","role","workspace","accessToken","refreshToken","userId"].forEach((k) => localStorage.removeItem(k));
+    router.push("/login");
+  };
+
+  const initials = user?.name
+    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "U";
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--color-bg)]">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div
+          className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-sm lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-[var(--color-surface)] border-r border-[var(--color-border)] flex flex-col transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-          {/* <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">W</span>
+        {/* Logo */}
+        <div className="flex items-center justify-between h-16 px-5 border-b border-[var(--color-border)]">
+          <div className="flex items-center gap-3">
+            <div className="bg-[var(--color-primary)] p-2 rounded-lg">
+              <FiBriefcase className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">WorkflowPro</span>
-          </div> */}
-          <div className="flex items-center h-16 px-4 border-b border-amber-100">
-                      <div className="flex items-center space-x-3">
-                        <div className="bg-linear-to-br from-amber-500 to-amber-600 p-2 rounded-lg">
-                          <FiBriefcase className="h-6 w-6 text-white" />
-                        </div>
-                        <span className="font-bold text-gray-900">WorkflowPro</span>
-                        <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded">BETA</span>
-                      </div>
-                    </div>
+            <span className="font-black text-[var(--color-text)]">WorkflowPro</span>
+          </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="p-2 text-gray-500 hover:text-gray-700 lg:hidden"
+            className="p-1.5 text-[var(--color-muted)] hover:text-[var(--color-text)] rounded-lg hover:bg-[var(--color-bg)] lg:hidden transition-colors"
           >
             <FiX className="h-5 w-5" />
           </button>
         </div>
 
-        <nav className="mt-6 px-4 space-y-1">
+        {/* Navigation */}
+        <nav className="flex-1 mt-4 px-3 space-y-1 overflow-y-auto">
+          <p className="px-3 mb-2 text-[10px] font-black text-[var(--color-faint)] uppercase tracking-wider">Main Menu</p>
           {navigation.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -104,60 +95,77 @@ export default function UserLayout({ children }) {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
+                onClick={() => setSidebarOpen(false)}
+                className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors group ${
                   active
-                    ? "bg-amber-50 text-amber-600"
-                    : "text-gray-700 hover:bg-gray-100"
+                    ? "bg-blue-50 text-[var(--color-primary)]"
+                    : "text-[var(--color-muted)] hover:bg-[var(--color-bg)] hover:text-[var(--color-text)]"
                 }`}
               >
-                <Icon className={`h-5 w-5 mr-3 ${active ? "text-amber-600" : "text-gray-500"}`} />
-                <span className="font-medium">{item.name}</span>
+                <div className="flex items-center gap-3">
+                  <Icon className={`h-4 w-4 ${active ? "text-[var(--color-primary)]" : "text-[var(--color-faint)] group-hover:text-[var(--color-muted)]"}`} />
+                  <span className="text-sm font-semibold">{item.name}</span>
+                </div>
+                {active && <FiChevronRight className="h-3.5 w-3.5 text-[var(--color-primary)]" />}
               </Link>
             );
           })}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
-          <button onClick={() => {
-            localStorage.removeItem("user");
-            localStorage.removeItem("role");
-            localStorage.removeItem("workspace");
-            localStorage.removeItem("token");
-            localStorage.removeItem("refreshToken");
-            localStorage.removeItem("userId");
-            router.push("/login");
-          }} className="flex items-center w-full px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
-            <FiLogOut className="h-5 w-5 mr-3 text-gray-500" />
-            <span className="font-medium hover:cursor-pointer">Sign Out</span>
+        {/* User info + sign out */}
+        <div className="border-t border-[var(--color-border)] p-3 space-y-2">
+          <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-[var(--color-bg-soft)]">
+            <div className="w-8 h-8 rounded-full bg-[var(--color-primary)] flex items-center justify-center text-white text-xs font-black flex-shrink-0">
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-black text-[var(--color-text)] truncate">{user?.name || "User"}</p>
+              <p className="text-xs text-[var(--color-muted)] truncate capitalize">{user?.userType || "member"}</p>
+            </div>
+          </div>
+          <button
+            onClick={handleSignOut}
+            className="flex items-center w-full px-3 py-2.5 rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-bg)] hover:text-[var(--color-danger)] transition-colors"
+          >
+            <FiLogOut className="h-4 w-4 mr-3" />
+            <span className="text-sm font-semibold">Sign Out</span>
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <div className="lg:pl-64">
+      <div className="lg:pl-64 flex flex-col min-h-screen">
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-white border-b border-gray-200">
-          <div className="flex items-center justify-between px-4 py-3 lg:px-8">
+        <header className="sticky top-0 z-30 bg-[var(--color-surface)] border-b border-[var(--color-border)] shadow-sm">
+          <div className="flex items-center justify-between px-4 py-3 lg:px-6">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 text-gray-500 hover:text-gray-700 lg:hidden"
+              className="p-2 text-[var(--color-muted)] hover:text-[var(--color-text)] rounded-lg hover:bg-[var(--color-bg)] transition-colors lg:hidden"
             >
-              <FiMenu className="h-6 w-6" />
+              <FiMenu className="h-5 w-5" />
             </button>
 
-            <div className="flex items-center gap-4 ml-auto">
-              <button className="relative p-2 text-gray-500 hover:text-gray-700">
-                <FiBell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            {/* Breadcrumb */}
+            <div className="hidden lg:flex items-center gap-2 text-sm text-[var(--color-muted)]">
+              <FiHome className="h-4 w-4" />
+              <FiChevronRight className="h-3.5 w-3.5" />
+              <span className="font-semibold text-[var(--color-text)] capitalize">
+                {navigation.find((n) => isActive(n.href))?.name || "Dashboard"}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 ml-auto">
+              <button className="relative p-2 text-[var(--color-muted)] hover:text-[var(--color-text)] rounded-lg hover:bg-[var(--color-bg)] transition-colors">
+                <FiBell className="h-4 w-4" />
+                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[var(--color-danger)] rounded-full" />
               </button>
-              
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-semibold">
-                  {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-[var(--color-primary)] flex items-center justify-center text-white text-xs font-black">
+                  {initials}
                 </div>
                 <div className="hidden md:block">
-                  <p className="text-sm font-medium text-gray-900">{user?.name || "User"}</p>
-                  <p className="text-xs text-gray-500">{user?.userType || "member"}</p>
+                  <p className="text-sm font-black text-[var(--color-text)] leading-none">{user?.name || "User"}</p>
+                  <p className="text-xs text-[var(--color-muted)] mt-0.5 capitalize">{user?.userType || "member"}</p>
                 </div>
               </div>
             </div>
@@ -165,7 +173,7 @@ export default function UserLayout({ children }) {
         </header>
 
         {/* Page Content */}
-        <main className="p-4 lg:p-8">
+        <main className="flex-1 p-4 lg:p-6">
           {children}
         </main>
       </div>
