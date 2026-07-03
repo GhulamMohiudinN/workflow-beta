@@ -14,8 +14,6 @@ import {
   FiZap, 
   FiSave, 
   FiSearch, 
-  FiMaximize2, 
-  FiMousePointer, 
   FiLayers,
   FiClock,
   FiPlus,
@@ -26,7 +24,6 @@ import {
   FiRefreshCw,
   FiZoomIn,
   FiZoomOut
-
 } from "react-icons/fi";
 import { processAPI } from "../../api/processAPI";
 import { userAPI } from "../../api/userAPI";
@@ -324,7 +321,7 @@ export default function ProcessBuilderPage() {
     finally { setIsSaving(false); }
   };
 
-  const activeStep = useMemo(() => steps.find(s => s.id === activeId), [activeId, steps]);
+  const activeStep = useMemo(() => steps.find(s => s.id === activeId), [activeId, steps]); // used in DragOverlay
 
   return (
     <div id="canvas-root" className={`flex flex-col bg-[#f6f8fb] ${isInternalFullscreen ? 'fixed inset-0 z-[999]' : '-m-8 h-[calc(100vh-4rem)] overflow-hidden font-sans'}`}>
@@ -398,8 +395,7 @@ export default function ProcessBuilderPage() {
           </button>
         )}
 
-        {/* Grid pattern background */}
-        <div className="absolute inset-0 opacity-[0.6] pointer-events-none" style={{ backgroundImage: `radial-gradient(#cbd5e1 1.5px, transparent 1.5px)`, backgroundSize: `24px 24px` }} />
+
 
         {/* Left top Process Map Overlay */}
         {selectedProcessId && (
@@ -452,13 +448,11 @@ export default function ProcessBuilderPage() {
             style={{ transform: `scale(${zoomScale}) translate(${panOffset.x / zoomScale}px, ${panOffset.y / zoomScale}px)` }}
           >
           {!selectedProcessId ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center animate-in fade-in duration-1000">
-              <div className="w-40 h-40 bg-slate-50 rounded-[3rem] flex items-center justify-center mb-10 border border-slate-200 relative">
-                 <div className="absolute inset-0 bg-blue-500/10 rounded-[3.5rem] blur-3xl opacity-20" />
-                 <FiLayers className="w-16 h-16 text-slate-300" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--color-bg-soft)] border border-[var(--color-border)]">
+                <FiLayers className="w-7 h-7 text-[var(--color-faint)]" />
               </div>
-              <h3 className="text-3xl font-black text-slate-800 uppercase tracking-tighter italic">Process <span className="text-blue-600">Arena</span></h3>
-              <p className="max-w-xs text-slate-400 mt-4 text-[10px] font-black uppercase tracking-[0.4em] leading-relaxed">Select a workflow pattern from the header to begin layout configuration.</p>
+              <p className="mt-4 text-sm font-semibold text-[var(--color-muted)]">Select a process from the header to begin</p>
             </div>
           ) : (
             <>
