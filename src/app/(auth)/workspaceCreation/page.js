@@ -225,61 +225,31 @@ function CompanySetupContent() {
   };
 
   return verifying ? (
-    <div className="min-h-screen bg-linear-to-b from-amber-50 to-white flex items-center justify-center">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
-          Verifying your email...
-        </h2>
-        <p className="text-gray-600">
-          Please wait while we verify your email address.
-        </p>
+        <div className="animate-spin rounded-full h-12 w-12 border-2 border-[var(--color-border)] border-t-[var(--color-primary)] mx-auto mb-4"></div>
+        <h2 className="text-xl font-black text-[var(--color-text)] mb-2">Verifying your email...</h2>
+        <p className="text-[var(--color-muted)] font-medium">Please wait while we verify your email address.</p>
       </div>
     </div>
   ) : verificationError ? (
-    <div className="min-h-screen bg-linear-to-b from-amber-50 to-white flex items-center justify-center">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
       <div className="text-center max-w-md mx-auto px-4">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
-          <FiAlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            Verification Failed
-          </h2>
-          <p className="text-gray-600 mb-4">{verificationError}</p>
+        <div className="bg-white border border-[var(--color-border)] rounded-xl p-6 shadow-[var(--shadow-card)] mb-6">
+          <FiAlertCircle className="h-12 w-12 text-[var(--color-danger)] mx-auto mb-4" />
+          <h2 className="text-xl font-black text-[var(--color-text)] mb-2">Verification Failed</h2>
+          <p className="text-[var(--color-muted)] font-medium mb-4">{verificationError}</p>
           <div className="space-y-3">
             <button
               onClick={() => {
-                setVerificationError(null);
-                setVerifying(true);
-                authAPI
-                  .verifyEmail(token)
-                  .then(() => {
-                    toast.success(
-                      "Email verified successfully! Please complete your workspace setup.",
-                    );
-                    setVerifying(false);
-                    setIsReady(true);
-                  })
-                  .catch((error) => {
-                    console.error(
-                      "Retry verification error:",
-                      error.response?.data || error.message,
-                    );
-                    setVerificationError(
-                      error.response?.data?.message ||
-                        error.message ||
-                        "Verification failed again. Please try signing up again.",
-                    );
-                    setVerifying(false);
-                  });
+                setVerificationError(null); setVerifying(true);
+                authAPI.verifyEmail(token)
+                  .then(() => { toast.success("Email verified!"); setVerifying(false); setIsReady(true); })
+                  .catch((error) => { setVerificationError(error.response?.data?.message || error.message || "Verification failed again."); setVerifying(false); });
               }}
-              className="w-full bg-amber-600 text-white py-2 px-4 rounded-lg hover:bg-amber-700 transition-colors"
-            >
-              Try Again
-            </button>
-            <button
-              onClick={() => router.push("/signup")}
-              className="w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors"
-            >
+              className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white py-2.5 px-4 rounded-lg font-semibold transition-colors"
+            >Try Again</button>
+            <button onClick={() => router.push("/signup")} className="w-full bg-[var(--color-bg-soft)] text-[var(--color-muted)] py-2.5 px-4 rounded-lg font-semibold hover:bg-[var(--color-border)] transition-colors">
               Back to Signup
             </button>
           </div>
@@ -287,34 +257,28 @@ function CompanySetupContent() {
       </div>
     </div>
   ) : isReady ? (
-    <div className="min-h-screen bg-linear-to-b from-amber-50 to-white">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50">
       <Toaster duration={4000} position="top-right" />
 
       {/* Header */}
-      <header className="bg-white border-b border-amber-100">
+      <header className="bg-white border-b border-[var(--color-border)] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-amber-100 p-2 rounded-lg">
-                <FiBriefcase className="h-6 w-6 text-amber-600" />
+            <div className="flex items-center gap-3">
+              <div className="bg-[var(--color-primary)] p-2 rounded-lg">
+                <FiBriefcase className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">WorkflowPro</h1>
-                <p className="text-sm text-gray-600">Company Setup Wizard</p>
+                <h1 className="text-lg font-black text-[var(--color-text)]">WorkflowPro</h1>
+                <p className="text-xs text-[var(--color-muted)] font-medium">Company Setup Wizard</p>
               </div>
             </div>
-            <div className="text-sm text-gray-500">
-              Step {currentStep} of {totalSteps}
-            </div>
+            <div className="text-sm font-semibold text-[var(--color-muted)]">Step {currentStep} of {totalSteps}</div>
           </div>
-
           {/* Progress Bar */}
-          <div className="mt-4">
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-linear-to-r from-amber-500 to-amber-600 h-2 rounded-full transition-all duration-500"
-                style={{ width: getStepProgress() }}
-              ></div>
+          <div className="mt-3">
+            <div className="w-full bg-[var(--color-bg-soft)] rounded-full h-2">
+              <div className="bg-[var(--color-primary)] h-2 rounded-full transition-all duration-500" style={{ width: getStepProgress() }} />
             </div>
           </div>
         </div>
@@ -323,13 +287,13 @@ function CompanySetupContent() {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Step Headers */}
         <div className="mb-8 text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+          <h2 className="text-2xl font-black text-[var(--color-text)] mb-2">
             {currentStep === 1 && "Company Information"}
             {currentStep === 2 && "Company Details"}
             {currentStep === 3 && "Workflow Setup"}
             {currentStep === 4 && "Team Configuration"}
           </h2>
-          <p className="text-gray-600">
+          <p className="text-[var(--color-muted)] font-medium text-sm">
             {currentStep === 1 && "Tell us about your company"}
             {currentStep === 2 && "Complete your company profile"}
             {currentStep === 3 && "Configure your workflow preferences"}
@@ -337,8 +301,8 @@ function CompanySetupContent() {
           </p>
         </div>
 
-        {/* Form Steps */}
-        <div className="bg-white rounded-2xl shadow-xl border border-amber-100 p-6 sm:p-8">
+        {/* Form card */}
+        <div className="bg-white rounded-xl shadow-[var(--shadow-card)] border border-[var(--color-border)] p-6 sm:p-8">
           {/* Step 1: Basic Company Info */}
           {currentStep === 1 && (
             <div className="space-y-6">
@@ -356,7 +320,7 @@ function CompanySetupContent() {
                       type="text"
                       name="companyName"
                       {...register("companyName")}
-                      className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                      className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all duration-200"
                       placeholder="Enter company name"
                       required
                     />
@@ -377,7 +341,7 @@ function CompanySetupContent() {
                     <select
                       name="companyType"
                       {...register("companyType")}
-                      className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                      className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all duration-200"
                       required
                     >
                       <option value="">Select company type</option>
@@ -404,7 +368,7 @@ function CompanySetupContent() {
                     <select
                       name="industry"
                       {...register("industry")}
-                      className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                      className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all duration-200"
                       required
                     >
                       <option value="">Select industry</option>
@@ -450,7 +414,7 @@ function CompanySetupContent() {
                     type="tel"
                     name="phoneNumber"
                     {...register("phoneNumber")}
-                    className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                    className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all duration-200"
                     placeholder="+1 (555) 123-4567"
                   />
                   <p className="text-red-500 text-sm mt-2">
@@ -470,7 +434,7 @@ function CompanySetupContent() {
                       type="url"
                       name="website"
                       {...register("website")}
-                      className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                      className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all duration-200"
                       placeholder="https://company.com"
                     />
                   </div>
@@ -493,7 +457,7 @@ function CompanySetupContent() {
                       {...register("foundedYear")}
                       min="1800"
                       max={new Date().getFullYear()}
-                      className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                      className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all duration-200"
                       placeholder="2020"
                     />
                   </div>
@@ -520,7 +484,7 @@ function CompanySetupContent() {
                     <select
                       name="employeeCount"
                       {...register("employeeCount")}
-                      className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                      className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all duration-200"
                       required
                     >
                       <option value="">Select range</option>
@@ -548,7 +512,7 @@ function CompanySetupContent() {
                       type="text"
                       name="headquarters"
                       {...register("headquarters")}
-                      className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                      className="pl-10 block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all duration-200"
                       placeholder="City, Country"
                       required
                     />
@@ -565,7 +529,7 @@ function CompanySetupContent() {
                   <select
                     name="timezone"
                     {...register("timezone")}
-                    className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                    className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all duration-200"
                   >
                     {Intl.supportedValuesOf("timeZone").map((tz) => (
                       <option key={tz} value={tz}>
@@ -585,7 +549,7 @@ function CompanySetupContent() {
                   <select
                     name="currency"
                     {...register("currency")}
-                    className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                    className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all duration-200"
                   >
                     <option value="USD">USD ($)</option>
                     <option value="EUR">EUR (€)</option>
@@ -607,7 +571,7 @@ function CompanySetupContent() {
                     type="text"
                     name="taxId"
                     {...register("taxId")}
-                    className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                    className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all duration-200"
                     placeholder="Enter tax identification number"
                   />
                   <p className="text-red-500 text-sm mt-2">
@@ -623,7 +587,7 @@ function CompanySetupContent() {
                     type="text"
                     name="registrationNumber"
                     {...register("registrationNumber")}
-                    className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                    className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all duration-200"
                     placeholder="Enter registration number"
                   />
                   <p className="text-red-500 text-sm mt-2">
@@ -632,9 +596,9 @@ function CompanySetupContent() {
                 </div>
               </div>
 
-              <div className="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-[var(--color-border)]">
                 <div className="flex items-start space-x-3">
-                  <FiShield className="h-5 w-5 text-amber-600 mt-0.5" />
+                  <FiShield className="h-5 w-5 text-[var(--color-primary)] mt-0.5" />
                   <div>
                     <p className="text-sm text-gray-700">
                       Your company information is stored securely with enterprise-grade encryption.
@@ -658,8 +622,8 @@ function CompanySetupContent() {
                       key={type}
                       className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
                         primaryWorkflowTypes?.includes(type)
-                          ? "border-amber-500 bg-amber-50"
-                          : "border-gray-300 hover:border-amber-300"
+                          ? "border-[var(--color-primary)] bg-blue-50"
+                          : "border-gray-300 hover:border-[var(--color-primary)]"
                       }`}
                       onClick={() =>
                         handleArrayChange("primaryWorkflowTypes", type)
@@ -668,7 +632,7 @@ function CompanySetupContent() {
                       <div
                         className={`shrink-0 w-5 h-5 rounded-full border flex items-center justify-center mr-3 ${
                           primaryWorkflowTypes?.includes(type)
-                            ? "border-amber-500 bg-amber-500"
+                            ? "border-[var(--color-primary)] bg-blue-500"
                             : "border-gray-400"
                         }`}
                       >
@@ -692,7 +656,7 @@ function CompanySetupContent() {
                   </label>
                   <select
                     {...register("expectedWorkflows")}
-                    className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                    className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all duration-200"
                   >
                     <option value="">Select range</option>
                     <option value="1-10">1-10 workflows</option>
@@ -718,7 +682,7 @@ function CompanySetupContent() {
                           value={level}
                           checked={automationPriority === level}
                           onChange={handleInputChange}
-                          className="h-4 w-4 text-amber-600 focus:ring-amber-500"
+                          className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                         />
                         <span className="ml-2 text-sm text-gray-700 capitalize">
                           {level}
@@ -729,9 +693,9 @@ function CompanySetupContent() {
                 </div>
               </div>
 
-              <div className="p-4 bg-linear-to-r from-amber-50 to-amber-100 rounded-lg border border-amber-200">
+              <div className="p-4 bg-linear-to-r from-blue-50 to-blue-50 rounded-lg border border-[var(--color-border)]">
                 <div className="flex items-start space-x-3">
-                  <FiZap className="h-5 w-5 text-amber-600 mt-0.5" />
+                  <FiZap className="h-5 w-5 text-[var(--color-primary)] mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-gray-700 mb-1">
                       AI-Powered Suggestions
@@ -757,7 +721,7 @@ function CompanySetupContent() {
                   <select
                     name="initialTeamSize"
                     {...register("initialTeamSize")}
-                    className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                    className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all duration-200"
                   >
                     <option value="1">Just me (Admin)</option>
                     <option value="2-5">2-5 team members</option>
@@ -780,17 +744,17 @@ function CompanySetupContent() {
                     ([channel, enabled]) => (
                       <div
                         key={channel}
-                        className="flex items-center justify-between p-4 border border-gray-300 rounded-lg hover:border-amber-300 transition-all duration-200"
+                        className="flex items-center justify-between p-4 border border-gray-300 rounded-lg hover:border-[var(--color-primary)] transition-all duration-200"
                       >
                         <div className="flex items-center">
                           <div
                             className={`p-2 rounded-lg mr-3 ${
-                              enabled ? "bg-amber-100" : "bg-gray-100"
+                              enabled ? "bg-blue-50" : "bg-gray-100"
                             }`}
                           >
                             <FiLayers
                               className={`h-5 w-5 ${
-                                enabled ? "text-amber-600" : "text-gray-400"
+                                enabled ? "text-[var(--color-primary)]" : "text-gray-400"
                               }`}
                             />
                           </div>
@@ -809,8 +773,8 @@ function CompanySetupContent() {
                         <button
                           type="button"
                           onClick={() => handleNotificationChange(channel)}
-                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 ${
-                            enabled ? "bg-amber-600" : "bg-gray-300"
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 ${
+                            enabled ? "bg-[var(--color-primary-hover)]" : "bg-gray-300"
                           }`}
                         >
                           <span
@@ -860,7 +824,7 @@ function CompanySetupContent() {
               type="button"
               onClick={handleFormData}
               disabled={loading}
-              className="flex items-center gap-2 px-8 py-3 rounded-lg font-medium text-white bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-500/25"
+              className="flex items-center gap-2 px-8 py-3 rounded-lg font-medium text-white bg-linear-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] hover:from-[var(--color-primary-hover)] hover:to-[var(--color-primary-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25"
             >
               {loading ? (
                 <>
@@ -890,9 +854,9 @@ function CompanySetupContent() {
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
                     step === currentStep
-                      ? "bg-amber-500 text-white"
+                      ? "bg-blue-500 text-white"
                       : step < currentStep
-                        ? "bg-amber-100 text-amber-600"
+                        ? "bg-blue-50 text-[var(--color-primary)]"
                         : "bg-gray-100 text-gray-400"
                   }`}
                 >
@@ -900,7 +864,7 @@ function CompanySetupContent() {
                 </div>
                 <span
                   className={`text-xs font-medium ${
-                    step === currentStep ? "text-amber-600" : "text-gray-500"
+                    step === currentStep ? "text-[var(--color-primary)]" : "text-gray-500"
                   }`}
                 >
                   {step === 1 && "Basic Info"}

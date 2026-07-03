@@ -95,9 +95,9 @@ export default function DashboardLayout({ children }) {
     });
     items.push({
       name: "Reports",
-      href: "/dashboard",
+      href: "/reports",
       icon: LuChartNoAxesCombined,
-      current: false,
+      current: pathname.includes("/reports"),
     });
 
     return items;
