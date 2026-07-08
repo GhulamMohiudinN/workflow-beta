@@ -32,7 +32,7 @@ export const TeamOverview = ({ members = [] }) => (
                 </p>
               </div>
             </div>
-            <FiMessageSquare size={14} className="text-[var(--color-muted)]" />
+            {/* <FiMessageSquare size={14} className="text-[var(--color-muted)]" /> */}
           </div>
         ))}
         <Link
