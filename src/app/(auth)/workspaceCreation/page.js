@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useRef, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FaBuilding } from "react-icons/fa";
 import { toast, Toaster } from "react-hot-toast";
@@ -35,7 +35,212 @@ import {
   FiUser,
   FiZap,
   FiAlertCircle,
+  FiSearch,
+  FiClock,
+  FiChevronDown,
+  FiX,
 } from "react-icons/fi";
+
+// ─── Timezone utilities ───────────────────────────────────────────────────────
+
+/** Returns the UTC offset string for a given IANA timezone, e.g. "UTC+5:30" */
+function getUtcOffset(tz) {
+  try {
+    const now = new Date();
+    const parts = new Intl.DateTimeFormat("en", {
+      timeZone: tz,
+      timeZoneName: "shortOffset",
+    }).formatToParts(now);
+    const offsetPart = parts.find((p) => p.type === "timeZoneName");
+    return offsetPart ? offsetPart.value : "UTC";
+  } catch {
+    return "UTC";
+  }
+}
+
+/** Detect the user's local timezone on mount */
+function getLocalTimezone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return "UTC";
+  }
+}
+
+/** Build a sorted list of { value, label } objects once, sorted by offset then name */
+function buildTimezoneList() {
+  const raw = Intl.supportedValuesOf("timeZone");
+  return raw
+    .map((tz) => {
+      const offset = getUtcOffset(tz);
+      // Parse numeric offset for sort key (e.g. "UTC+5:30" → 5.5)
+      const match = offset.match(/([+-])(\d+):?(\d*)/);
+      const sign   = match ? (match[1] === "+" ? 1 : -1) : 0;
+      const hours  = match ? parseInt(match[2], 10) : 0;
+      const mins   = match ? parseInt(match[3] || "0", 10) : 0;
+      const sortKey = sign * (hours + mins / 60);
+      return { value: tz, label: `(${offset}) ${tz.replace(/_/g, " ")}`, offset, sortKey };
+    })
+    .sort((a, b) => a.sortKey - b.sortKey || a.value.localeCompare(b.value));
+}
+
+// Build once at module level — ~600 items, cheap
+const ALL_TIMEZONES = buildTimezoneList();
+
+// ─── TimezoneSelect component ─────────────────────────────────────────────────
+function TimezoneSelect({ value, onChange, error }) {
+  const [isOpen, setIsOpen]     = useState(false);
+  const [query,  setQuery]      = useState("");
+  const containerRef            = useRef(null);
+  const inputRef                = useRef(null);
+  const listRef                 = useRef(null);
+
+  // Filter list based on search query
+  const filtered = useMemo(() => {
+    if (!query.trim()) return ALL_TIMEZONES;
+    const q = query.toLowerCase();
+    return ALL_TIMEZONES.filter(
+      (tz) =>
+        tz.value.toLowerCase().includes(q) ||
+        tz.offset.toLowerCase().includes(q)
+    );
+  }, [query]);
+
+  // Display label for currently selected value
+  const selectedLabel = useMemo(() => {
+    const found = ALL_TIMEZONES.find((tz) => tz.value === value);
+    return found ? found.label : value || "Select timezone";
+  }, [value]);
+
+  // Auto-detect on first open if nothing is selected
+  const handleOpen = useCallback(() => {
+    if (!value) onChange(getLocalTimezone());
+    setIsOpen(true);
+    // Focus the search box after transition
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, [value, onChange]);
+
+  const handleSelect = useCallback((tz) => {
+    onChange(tz.value);
+    setIsOpen(false);
+    setQuery("");
+  }, [onChange]);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+        setQuery("");
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [isOpen]);
+
+  // Keyboard: Escape closes
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === "Escape") { setIsOpen(false); setQuery(""); }
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative" onKeyDown={handleKeyDown}>
+      {/* Trigger button */}
+      <button
+        type="button"
+        onClick={isOpen ? () => { setIsOpen(false); setQuery(""); } : handleOpen}
+        className={`flex items-center justify-between w-full border rounded-lg py-3 px-4 text-sm bg-white transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
+          error
+            ? "border-red-400"
+            : isOpen
+            ? "border-[var(--color-primary)] ring-2 ring-blue-100"
+            : "border-gray-300 hover:border-[var(--color-primary)]"
+        }`}
+      >
+        <span className="flex items-center gap-2 truncate">
+          <FiClock className="h-4 w-4 text-gray-400 shrink-0" />
+          <span className={`truncate ${value ? "text-gray-800" : "text-gray-400"}`}>
+            {selectedLabel}
+          </span>
+        </span>
+        <FiChevronDown
+          className={`h-4 w-4 text-gray-400 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {/* Dropdown */}
+      {isOpen && (
+        <div className="absolute z-[200] left-0 right-0 top-full mt-1.5 bg-white border border-[var(--color-border)] rounded-xl shadow-[var(--shadow-popover)] overflow-hidden">
+          {/* Search bar */}
+          <div className="p-2 border-b border-[var(--color-border)]">
+            <div className="relative">
+              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search timezone or offset…"
+                className="w-full pl-9 pr-8 py-2 text-sm border border-[var(--color-border)] rounded-lg outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-blue-100 transition-all"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label="Clear search"
+                >
+                  <FiX className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* List */}
+          <ul
+            ref={listRef}
+            className="max-h-[260px] overflow-y-auto py-1"
+            role="listbox"
+          >
+            {filtered.length === 0 ? (
+              <li className="px-4 py-6 text-center text-sm text-gray-400 font-medium">
+                No timezones match &quot;{query}&quot;
+              </li>
+            ) : (
+              filtered.map((tz) => (
+                <li
+                  key={tz.value}
+                  role="option"
+                  aria-selected={tz.value === value}
+                  onClick={() => handleSelect(tz)}
+                  className={`flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer transition-colors ${
+                    tz.value === value
+                      ? "bg-blue-50 text-[var(--color-primary)] font-semibold"
+                      : "text-gray-700 hover:bg-[var(--color-surface-hover)]"
+                  }`}
+                >
+                  <span className="truncate">{tz.value.replace(/_/g, " ")}</span>
+                  <span className={`ml-3 shrink-0 text-xs font-mono ${tz.value === value ? "text-[var(--color-primary)]" : "text-gray-400"}`}>
+                    {tz.offset}
+                  </span>
+                </li>
+              ))
+            )}
+          </ul>
+
+          {/* Footer count */}
+          <div className="px-4 py-2 border-t border-[var(--color-border)] bg-[var(--color-surface-hover)]">
+            <p className="text-[11px] text-gray-400 font-medium">
+              {filtered.length} timezone{filtered.length !== 1 ? "s" : ""}
+              {query ? ` matching "${query}"` : " available"}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function CompanySetupContent() {
   const router = useRouter();
@@ -526,17 +731,11 @@ function CompanySetupContent() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Timezone
                   </label>
-                  <select
-                    name="timezone"
-                    {...register("timezone")}
-                    className="block w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all duration-200"
-                  >
-                    {Intl.supportedValuesOf("timeZone").map((tz) => (
-                      <option key={tz} value={tz}>
-                        {tz}
-                      </option>
-                    ))}
-                  </select>
+                  <TimezoneSelect
+                    value={watch("timezone")}
+                    onChange={(tz) => setValue("timezone", tz, { shouldValidate: true, shouldDirty: true })}
+                    error={!!errors.timezone}
+                  />
                   <p className="text-red-500 text-sm mt-2">
                     {errors.timezone?.message}
                   </p>

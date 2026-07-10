@@ -9,6 +9,8 @@ import {
 } from "react-icons/fi";
 import { FaBuilding } from "react-icons/fa";
 import { authAPI } from "../../api/auth";
+import { userAPI } from "../../api/userAPI";
+import { processAPI } from "../../api/processAPI";
 import {
   COMPANY_TYPES, INDUSTRIES, EMPLOYEE_RANGES, workflowTypes,
 } from "../../(auth)/workspaceCreation/content";
@@ -98,6 +100,11 @@ export default function CompanyPage() {
   const [isSaving,   setIsSaving]   = useState(false);
   const [activeTab,  setActiveTab]  = useState(TABS.BASIC);
   const [isEditing,  setIsEditing]  = useState(false);
+  const [statsData,  setStatsData]  = useState({
+    totalMembers:    null,
+    activeProcesses: null,
+    daysActive:      null,
+  });
 
   const initData = () => ({
     name: "", email: "", website: "", industry: "", foundedYear: "",
@@ -139,7 +146,54 @@ export default function CompanyPage() {
     } catch (e) { console.error("Error parsing workspace:", e); }
   }, []);
 
-  const handleInputChange  = useCallback((field, value) => setCompany((prev) => ({ ...prev, [field]: value })), []);
+  // ── Fetch live stats for the 4 metric cards ───────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    const fetchStats = async () => {
+      try {
+        // Workspace createdAt → days active (no API needed)
+        let daysActive = null;
+        try {
+          const raw = localStorage.getItem("workspace");
+          const ws  = raw ? JSON.parse(raw) : {};
+          const createdAt = ws.createdAt;
+          if (createdAt) {
+            const diffMs = Date.now() - new Date(createdAt).getTime();
+            daysActive = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          }
+        } catch { /* ignore */ }
+
+        // Parallel: users total + process analytics
+        const [userRes, procRes] = await Promise.all([
+          userAPI.getWorkspaceUsers({ limit: 1 }),
+          processAPI.getWorkspaceProcesses({ limit: 1 }),
+        ]);
+
+        if (cancelled) return;
+
+        const totalMembers    = userRes.success  ? (userRes.total  ?? userRes.users?.length  ?? null) : null;
+        const activeProcesses = procRes.success
+          ? (procRes.analytics?.active?.total
+              ?? procRes.analytics?.active
+              ?? (Array.isArray(procRes.data)
+                  ? procRes.data.filter((p) =>
+                      ["active", "in-progress", "inprogress", "ongoing"].includes(
+                        (p.status || "").toLowerCase()
+                      )
+                    ).length
+                  : null))
+          : null;
+
+        setStatsData({ totalMembers, activeProcesses, daysActive });
+      } catch (err) {
+        console.error("[CompanyPage] stats fetch error:", err);
+      }
+    };
+    fetchStats();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleInputChange = useCallback((field, value) => setCompany((prev) => ({ ...prev, [field]: value })), []);
   const toggleWorkflowType = useCallback((type) => {
     setCompany((prev) => {
       const exists = prev.primaryWorkflowTypes.includes(type);
@@ -172,11 +226,13 @@ export default function CompanyPage() {
     } finally { setIsSaving(false); }
   };
 
+  // ── Build stats from live data (show skeleton "—" while loading) ─────────
+  const fmt = (v) => (v === null ? "—" : String(v));
   const stats = [
-    { label: "Total Members",    value: "8",    icon: FiUsers,     toneClass: "bg-blue-50 text-blue-600" },
-    { label: "Active Processes", value: "12",   icon: FiTrendingUp,toneClass: "bg-emerald-50 text-emerald-600" },
-    { label: "Storage Used",     value: "1.2GB",icon: FiDatabase,  toneClass: "bg-indigo-50 text-indigo-600" },
-    { label: "Days Active",      value: "45",   icon: FiCalendar,  toneClass: "bg-teal-50 text-teal-600" },
+    { label: "Total Members",    value: fmt(statsData.totalMembers),    icon: FiUsers,      toneClass: "bg-blue-50 text-blue-600"    },
+    { label: "Active Processes", value: fmt(statsData.activeProcesses), icon: FiTrendingUp, toneClass: "bg-emerald-50 text-emerald-600" },
+    { label: "Storage Used",     value: "—",                            icon: FiDatabase,   toneClass: "bg-indigo-50 text-indigo-600"  },
+    { label: "Days Active",      value: fmt(statsData.daysActive),      icon: FiCalendar,   toneClass: "bg-teal-50 text-teal-600"    },
   ];
 
   return (

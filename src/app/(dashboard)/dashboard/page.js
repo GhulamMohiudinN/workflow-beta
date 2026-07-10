@@ -133,10 +133,29 @@ export default function DashboardPage() {
     );
   }
 
-  const membersTotal = safeCount(overview?.members?.total);
-  const activeProcesses = safeCount(overview?.processes?.active?.total);
-  const pendingTasks = safeCount(overview?.processes?.pending?.total);
-  const workspaceName = workspace?.name || "Alex";
+  const membersTotal     = safeCount(overview?.members?.total);
+  const activeProcesses  = safeCount(overview?.processes?.active?.total);
+  const pendingTasks     = safeCount(overview?.processes?.pending?.total);
+  const completedTotal   = safeCount(overview?.processes?.completed?.total);
+  const workspaceName    = workspace?.name || "Alex";
+
+  // Resource Load: ratio of pending work to total workload (0–100), real metric
+  const totalWorkload    = activeProcesses + pendingTasks + completedTotal;
+  const resourceLoadPct  = totalWorkload > 0
+    ? Math.round(((activeProcesses + pendingTasks) / totalWorkload) * 100)
+    : 0;
+
+  // Completion rate as a proxy for "system health" (replaces hardcoded 99.98%)
+  const completionRate   = totalWorkload > 0
+    ? Math.round((completedTotal / totalWorkload) * 100)
+    : 0;
+
+  // Derive sparkline values from what we have — step series based on counts
+  const memberSparkline  = overview?.members?.trend
+    || [membersTotal > 3 ? membersTotal - 3 : 1, membersTotal > 2 ? membersTotal - 2 : 1,
+        membersTotal > 1 ? membersTotal - 1 : 1, membersTotal];
+  const activeSparkline  = overview?.processes?.trend
+    || [activeProcesses > 2 ? activeProcesses - 2 : 0, activeProcesses > 1 ? activeProcesses - 1 : 0, activeProcesses];
 
   const activities =
     overview?.recentActivities?.length > 0
@@ -188,38 +207,43 @@ export default function DashboardPage() {
         <DashboardMetricCard
           title="Total Members"
           value={membersTotal.toLocaleString()}
-          detail="+2% this month"
+          detail={membersTotal > 0 ? `${membersTotal} workspace member${membersTotal !== 1 ? "s" : ""}` : "No members yet"}
           icon={FiUsers}
           tone="primary"
           chart="line"
-          chartValues={[14, 30, 42, 34, 27, 38, 50, 43]}
+          chartValues={memberSparkline}
         />
         <DashboardMetricCard
           title="Active Workflows"
           value={activeProcesses}
-          detail={`${pendingTasks} pending tasks`}
+          detail={`${pendingTasks} pending task${pendingTasks !== 1 ? "s" : ""}`}
           icon={FiZap}
           tone="secondary"
           chart="progress"
-          progress={Math.min(100, Math.max(16, activeProcesses * 8 + 42))}
+          progress={totalWorkload > 0 ? Math.round((activeProcesses / totalWorkload) * 100) : 0}
         />
         <DashboardMetricCard
-          title="System Uptime"
-          value="99.98%"
-          detail="Operational"
+          title="Completion Rate"
+          value={`${completionRate}%`}
+          detail={`${completedTotal} completed process${completedTotal !== 1 ? "es" : ""}`}
           icon={FiCheckCircle}
           tone="success"
           chart="bars"
-          chartValues={[42, 66, 58, 76, 70, 84]}
+          chartValues={[
+            Math.max(1, completedTotal - 3),
+            Math.max(1, completedTotal - 2),
+            Math.max(1, completedTotal - 1),
+            Math.max(1, completedTotal),
+          ]}
         />
         <DashboardMetricCard
           title="Resource Load"
-          value={`${Math.min(100, pendingTasks * 7 + 35)}%`}
-          detail="Capacity"
+          value={`${resourceLoadPct}%`}
+          detail={resourceLoadPct > 75 ? "High load" : resourceLoadPct > 40 ? "Moderate" : "Capacity available"}
           icon={FiCloud}
           tone="warning"
           chart="line"
-          chartValues={[42, 48, 39, 34, 40, 31, 45]}
+          chartValues={activeSparkline}
         />
       </div>
 

@@ -7,12 +7,12 @@ import {
   FiHelpCircle,
   FiLogOut,
   FiMenu,
-  FiSearch,
   FiSettings,
   FiUser,
 } from "react-icons/fi";
 import { Avatar } from "./Badge";
 import { Button } from "./Button";
+import CommandSearch from "./CommandSearch";
 
 export const Header = ({
   onMenuClick,
@@ -40,15 +40,7 @@ export const Header = ({
           </Button>
 
           <div className="relative hidden w-full max-w-md md:block">
-            <FiSearch
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-faint)]"
-              size={16}
-            />
-            <input
-              className="app-focus h-10 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] pl-10 pr-4 text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)]"
-              placeholder="Search Command Center..."
-              type="search"
-            />
+            <CommandSearch />
           </div>
         </div>
 
