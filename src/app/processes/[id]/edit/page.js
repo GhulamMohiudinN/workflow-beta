@@ -76,6 +76,8 @@ export default function EditProcessPage() {
   const [success, setSuccess] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
@@ -290,14 +292,22 @@ export default function EditProcessPage() {
     }
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const handleSubmit = (event) => {
+    if (event?.preventDefault) {
+      event.preventDefault();
+    }
 
     if (activeStep !== stepsConfig.length || !validateStep()) {
       setError("Please complete all required information before saving.");
       return;
     }
 
+    setError(null);
+    setShowConfirmModal(true);
+  };
+
+  const confirmUpdate = async () => {
+    setShowConfirmModal(false);
     setIsSubmitting(true);
     setError(null);
     setSuccessMessage("");
@@ -307,9 +317,8 @@ export default function EditProcessPage() {
 
       if (result.success) {
         setSuccessMessage(result.message || "Process updated successfully");
-        setSuccess(true);
+        setShowSuccessModal(true);
         toast.success("Process updated successfully");
-        window.setTimeout(() => router.push("/processes"), 1600);
       } else {
         setError(result.error || "Failed to update process. Please try again.");
         toast.error("Failed to update process");
@@ -800,7 +809,7 @@ export default function EditProcessPage() {
       <div className="grid gap-8 lg:grid-cols-3">
         <div className={showPreview ? "lg:col-span-2" : "lg:col-span-3"}>
           <div className="mx-auto max-w-5xl overflow-hidden rounded-xl border border-white/70 bg-white/90 shadow-[0_18px_45px_rgba(37,99,235,0.08)]">
-            <form onSubmit={handleSubmit} className="p-8">
+            <form onSubmit={(event) => event.preventDefault()} className="p-8">
               {renderStepContent()}
 
               <div className="mt-8 flex items-center justify-between border-t border-slate-200 pt-6">
@@ -824,7 +833,7 @@ export default function EditProcessPage() {
                 )}
 
                 {activeStep === stepsConfig.length ? (
-                  <button type="submit" disabled={isSubmitting} className={primaryButtonClass}>
+                  <button type="button" onClick={handleSubmit} disabled={isSubmitting} className={primaryButtonClass}>
                     {isSubmitting ? (
                       <>
                         <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
@@ -858,6 +867,66 @@ export default function EditProcessPage() {
           onClose={() => setShowDeleteModal(false)}
           onConfirm={handleDelete}
         />
+      )}
+
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-blue-50 text-blue-700">
+              <FiAlertCircle className="h-5 w-5" />
+            </div>
+            <h3 className="text-lg font-black text-slate-950">Confirm process update</h3>
+            <p className="mt-2 text-sm font-medium text-slate-600">
+              Are you sure you want to save these changes to this process?
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                className={secondaryButtonClass}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmUpdate}
+                disabled={isSubmitting}
+                className={primaryButtonClass}
+              >
+                {isSubmitting ? "Saving..." : "Confirm Update"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-green-200 bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-green-700">
+              <FiCheck className="h-6 w-6" />
+            </div>
+            <h3 className="text-lg font-black text-slate-950">Process updated</h3>
+            <p className="mt-2 text-sm font-medium text-slate-600">
+              {successMessage || "Your changes have been saved successfully."}
+            </p>
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowSuccessModal(false)}
+                className={secondaryButtonClass}
+              >
+                Continue Editing
+              </button>
+              <Link href={`/processes/${id}`} className={primaryButtonClass}>
+                View Process
+              </Link>
+              <Link href="/processes" className={secondaryButtonClass}>
+                Back to Processes
+              </Link>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

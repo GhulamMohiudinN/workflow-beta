@@ -19,29 +19,29 @@ export const DashboardMetricCard = ({
   };
 
   return (
-    <Card className="min-h-[150px]">
-      <CardContent>
+    <Card className="h-full">
+      <CardContent className="flex h-full flex-col justify-between gap-4">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-black uppercase text-[var(--color-muted)]">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-(--color-muted)">
               {title}
             </p>
-            <p className="mt-3 text-2xl font-black text-[var(--color-text)]">
+            <p className="mt-3 text-2xl font-black text-(--color-text)">
               {value}
             </p>
-            <p className="mt-1 text-xs font-semibold text-[var(--color-muted)]">
+            <p className="mt-1 text-xs font-semibold leading-5 text-(--color-muted)">
               {detail}
             </p>
           </div>
           {Icon && (
             <div
-              className={`rounded-lg p-2 ${iconTone[tone] || iconTone.primary}`}
+              className={`shrink-0 rounded-lg p-2 ${iconTone[tone] || iconTone.primary}`}
             >
               <Icon size={17} />
             </div>
           )}
         </div>
-        <div className="mt-4">
+        <div className="mt-auto pt-1">
           {chart === "line" && (
             <Sparkline
               tone={tone}

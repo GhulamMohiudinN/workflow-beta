@@ -1,11 +1,12 @@
 "use client";
 export const dynamic = "force-dynamic";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { toast, Toaster } from "react-hot-toast";
 import {
   FiGlobe, FiUsers, FiMapPin, FiCalendar, FiEdit2, FiSave, FiX,
   FiShield, FiDatabase, FiTrendingUp, FiBriefcase, FiCheck,
-  FiAlertCircle, FiHash, FiPhone, FiToggleLeft, FiZap,
+  FiAlertCircle, FiHash, FiPhone, FiToggleLeft, FiZap, FiSearch,
+  FiChevronDown,
 } from "react-icons/fi";
 import { FaBuilding } from "react-icons/fa";
 import { authAPI } from "../../api/auth";
@@ -20,10 +21,6 @@ import { Button } from "../../../components/Button";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CURRENCIES = ["USD", "EUR", "GBP", "CAD", "AUD", "INR"];
-const TIMEZONES =
-  typeof Intl !== "undefined" && Intl.supportedValuesOf
-    ? Intl.supportedValuesOf("timeZone").sort()
-    : ["UTC"];
 const INITIAL_TEAM_SIZES = [
   "Just me (Admin)", "2-5 team members", "6-20 team members",
   "21-50 team members", "50+ team members",
@@ -37,6 +34,142 @@ const TABS = { BASIC: "basic", DETAILS: "details", WORKFLOWS: "workflows", NOTIF
 
 const inputCls = "w-full border border-[var(--color-border)] rounded-lg py-2.5 px-4 text-sm text-[var(--color-text)] bg-[var(--color-bg)] focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] outline-none transition-all placeholder:text-[var(--color-faint)]";
 const selectCls = inputCls;
+
+function getUtcOffset(tz) {
+  try {
+    const now = new Date();
+    const parts = new Intl.DateTimeFormat("en", {
+      timeZone: tz,
+      timeZoneName: "shortOffset",
+    }).formatToParts(now);
+    const offsetPart = parts.find((p) => p.type === "timeZoneName");
+    return offsetPart ? offsetPart.value : "UTC";
+  } catch {
+    return "UTC";
+  }
+}
+
+function buildTimezoneList() {
+  const raw = typeof Intl !== "undefined" && Intl.supportedValuesOf ? Intl.supportedValuesOf("timeZone") : ["UTC"];
+  return raw
+    .map((tz) => {
+      const offset = getUtcOffset(tz);
+      const match = offset.match(/([+-])(\d+):?(\d*)/);
+      const sign = match ? (match[1] === "+" ? 1 : -1) : 0;
+      const hours = match ? parseInt(match[2], 10) : 0;
+      const mins = match ? parseInt(match[3] || "0", 10) : 0;
+      const sortKey = sign * (hours + mins / 60);
+      return { value: tz, label: `(${offset}) ${tz.replace(/_/g, " ")}`, offset, sortKey };
+    })
+    .sort((a, b) => a.sortKey - b.sortKey || a.value.localeCompare(b.value));
+}
+
+const ALL_TIMEZONES = buildTimezoneList();
+
+function TimezoneField({ label, value, isEditing, onChange, placeholder = "Search timezone..." }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState(value || "");
+  const containerRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (isEditing) {
+      setQuery(value || "");
+    }
+  }, [value, isEditing]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return ALL_TIMEZONES;
+    return ALL_TIMEZONES.filter((tz) => {
+      const searchable = `${tz.value} ${tz.label} ${tz.offset}`.toLowerCase();
+      return searchable.includes(q);
+    });
+  }, [query]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  }, [isOpen]);
+
+  const handleSelect = (tz) => {
+    onChange(tz.value);
+    setQuery(tz.value);
+    setIsOpen(false);
+  };
+
+  if (!isEditing) {
+    return (
+      <div>
+        <label className="block text-[10px] font-black uppercase tracking-wider text-[var(--color-faint)] mb-1.5">{label}</label>
+        <p className="text-sm font-semibold text-[var(--color-text)]">{value || <span className="text-[var(--color-faint)]">—</span>}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <label className="block text-xs font-black text-[var(--color-text)] mb-1.5">{label}</label>
+      <div className="relative">
+        <FiSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-faint)]" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          placeholder={placeholder}
+          className={`${inputCls} pl-10 pr-10`}
+        />
+        <button
+          type="button"
+          onClick={() => setIsOpen((prev) => !prev)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-faint)] hover:text-[var(--color-text)]"
+        >
+          <FiChevronDown className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 left-0 right-0 top-full mt-1.5 max-h-64 overflow-y-auto rounded-lg border border-[var(--color-border)] bg-white shadow-lg">
+          <ul className="py-1">
+            {filtered.length === 0 ? (
+              <li className="px-4 py-3 text-sm text-[var(--color-faint)]">No timezones match &quot;{query}&quot;</li>
+            ) : (
+              filtered.map((tz) => (
+                <li
+                  key={tz.value}
+                  onMouseDown={() => handleSelect(tz)}
+                  className={`cursor-pointer px-4 py-2.5 text-sm transition-colors ${tz.value === value ? "bg-blue-50 text-[var(--color-primary)]" : "text-[var(--color-text)] hover:bg-[var(--color-bg-soft)]"}`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="truncate">{tz.value.replace(/_/g, " ")}</span>
+                    <span className="shrink-0 text-xs font-mono text-[var(--color-faint)]">{tz.offset}</span>
+                  </div>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── FormField ────────────────────────────────────────────────────────────────
 
@@ -59,6 +192,9 @@ function FormField({ label, value, isEditing, onChange, type = "text", placehold
         </select>
       </div>
     );
+  }
+  if (type === "timezone") {
+    return <TimezoneField label={label} value={value} isEditing={isEditing} onChange={onChange} placeholder={placeholder} />;
   }
   if (type === "textarea") {
     return (
@@ -328,7 +464,7 @@ export default function CompanyPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <FormField label="Employee Count"       value={company.employeeCount}      isEditing={isEditing} onChange={(v) => handleInputChange("employeeCount", v)}      type="select" options={EMPLOYEE_RANGES} />
                   <FormField label="Primary Currency"     value={company.currency}           isEditing={isEditing} onChange={(v) => handleInputChange("currency", v)}           type="select" options={CURRENCIES} />
-                  <FormField label="Timezone"             value={company.timezone}           isEditing={isEditing} onChange={(v) => handleInputChange("timezone", v)}           type="select" options={TIMEZONES} />
+                  <FormField label="Timezone"             value={company.timezone}           isEditing={isEditing} onChange={(v) => handleInputChange("timezone", v)}           type="timezone" placeholder="Search timezone..." />
                   <FormField label="Automation Priority"  value={company.automationPriority} isEditing={isEditing} onChange={(v) => handleInputChange("automationPriority", v)} type="select" options={["low", "medium", "high"]} />
                 </div>
               </div>

@@ -490,10 +490,11 @@ export default function ProcessDetailPage() {
         <div className="flex items-center">
           <Link
             href="/processes"
-            className="flex items-center text-gray-600 hover:text-gray-900 mr-4 transition-colors"
+            className="mr-4 flex items-center text-gray-600 transition-colors hover:text-gray-900"
           >
-            <FiArrowLeft className="h-5 w-5 mr-2" />
-            Back
+            <span className="mr-2 flex h-8 w-8 items-center justify-center rounded-full bg-blue-200 p-1.5">
+              <FiArrowLeft className="h-4 w-4" />
+            </span>
           </Link>
           <div>
             <div className="flex items-center gap-3 mb-1">
