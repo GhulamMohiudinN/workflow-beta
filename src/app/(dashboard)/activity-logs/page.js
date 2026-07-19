@@ -188,21 +188,37 @@ export default function ActivityLogsPage() {
   const [error,       setError]       = useState(null);
   const [searchTerm,  setSearchTerm]  = useState("");
   const [pagination,  setPagination]  = useState({ page: 1, totalPages: 1, total: 0, limit: 20 });
+  const [rawDebug,    setRawDebug]    = useState(null);   // raw API response for debugging
+  const [showDebug,   setShowDebug]   = useState(false);  // toggle debug panel
 
   const fetchLogs = async (page = 1) => {
     try {
       setLoading(true);
       setError(null);
       const response = await workspaceAPI.getActivityLogs(page, 20);
+      setRawDebug(response); // always capture for the debug panel
+
       if (response.success) {
-        setLogs(response.logs);
-        setPagination({ page: response.page, totalPages: response.totalPages, total: response.total, limit: response.limit });
+        setLogs(response.logs ?? []);
+        setPagination({
+          page:       response.page       ?? 1,
+          totalPages: response.totalPages ?? 1,
+          total:      response.total      ?? 0,
+          limit:      response.limit      ?? 20,
+        });
       } else {
-        throw new Error("Failed to load activity logs.");
+        setError(
+          response.error ||
+          (response.status === 403
+            ? "You don't have permission to view activity logs."
+            : "Unable to reach the activity database. Please try again."),
+        );
+        setLogs([]);
       }
     } catch (err) {
-      console.error("Activity fetch error:", err);
+      console.error("[ActivityLogs] fetch error:", err);
       setError("Unable to reach the activity database. Please try again.");
+      setLogs([]);
     } finally {
       setLoading(false);
     }
@@ -295,14 +311,96 @@ export default function ActivityLogsPage() {
             Real-time audit trail of all operations within your workspace.
           </p>
         </div>
-        <Button
-          variant="outline" icon={FiRefreshCw}
-          onClick={() => fetchLogs(pagination.page)}
-          disabled={loading}
-        >
-          Refresh
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline" icon={FiRefreshCw}
+            onClick={() => fetchLogs(pagination.page)}
+            disabled={loading}
+          >
+            Refresh
+          </Button>
+          {/* DB Debug toggle — shows raw API response to diagnose storage issues */}
+          <button
+            onClick={() => setShowDebug((v) => !v)}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
+              showDebug
+                ? "border-violet-300 bg-violet-50 text-violet-700"
+                : "border-[var(--color-border)] bg-white text-[var(--color-muted)] hover:border-violet-300 hover:text-violet-700"
+            }`}
+            title="Toggle raw API response panel"
+          >
+            <FiShield size={13} />
+            DB Debug
+          </button>
+        </div>
       </div>
+
+      {/* ── DB Debug Panel ─────────────────────────────────────────────────── */}
+      {showDebug && (
+        <Card className="border-violet-200 bg-violet-50">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-sm font-black text-violet-800">
+                <FiShield size={14} className="text-violet-600" />
+                Raw API Response — <code className="font-mono text-xs">GET /activity-log/list</code>
+              </h2>
+              <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                rawDebug?.success
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-red-100 text-red-700"
+              }`}>
+                {rawDebug?.success ? "✓ Success" : rawDebug ? "✗ Failed" : "No data yet"}
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {rawDebug ? (
+              <div className="space-y-3">
+                {/* Summary row */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {[
+                    { label: "success",    value: String(rawDebug.success) },
+                    { label: "total",      value: String(rawDebug.total ?? "—") },
+                    { label: "page",       value: String(rawDebug.page ?? "—") },
+                    { label: "totalPages", value: String(rawDebug.totalPages ?? "—") },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="rounded-lg border border-violet-200 bg-white p-3">
+                      <p className="text-[10px] font-black uppercase text-violet-500">{label}</p>
+                      <p className="mt-1 text-lg font-black text-[var(--color-text)]">{value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Error message if any */}
+                {rawDebug.error && (
+                  <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+                    <FiAlertCircle size={14} className="mt-0.5 text-red-500 shrink-0" />
+                    <div>
+                      <p className="text-xs font-black text-red-800">API Error</p>
+                      <p className="text-xs text-red-700">{rawDebug.error}</p>
+                      {rawDebug.status && (
+                        <p className="text-[10px] text-red-500 mt-0.5">HTTP {rawDebug.status}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Raw JSON */}
+                <div>
+                  <p className="text-[10px] font-black uppercase text-violet-500 mb-1.5">
+                    Full Response ({rawDebug.logs?.length ?? 0} log records)
+                  </p>
+                  <pre className="max-h-[360px] overflow-auto rounded-lg border border-violet-200 bg-white p-4 text-[11px] leading-relaxed text-slate-700">
+                    {JSON.stringify(rawDebug, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-[var(--color-muted)]">No data captured yet — click Refresh to fetch.</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

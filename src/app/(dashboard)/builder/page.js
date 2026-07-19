@@ -650,39 +650,92 @@ function ProcessBuilderInner() {
       setIsLoading(false);
     };
     load();
-  }, [selectedProcessId, setNodes, setEdges, fitView]);
+  }, [selectedProcessId, setNodes, setEdges]);
 
   const saveSequence = useCallback(async (showToast = true) => {
     if (!selectedProcessId) return;
     setIsSaving(true);
     try {
-      const updatedData = {
-        ...selectedProcess,
-        steps: steps.map((s) => ({
-          ...s,
-          sequenceNo: s.sequenceNo,
-          nodeType: s.nodeType,
-          assignee:
-            s.assignee && typeof s.assignee === "object"
-              ? s.assignee._id
-              : s.assignee === "Unassigned"
-              ? null
-              : s.assignee,
-          timeEstimate: s.estimateTime,
-        })),
+      // Build a clean payload — never spread raw Mongoose documents.
+      // Only include _id when the step already exists in the DB (non-temp id).
+      // New steps (id starts with "step-") have no _id and the backend creates them.
+      const cleanSteps = steps.map((s) => {
+        const isExistingStep =
+          s._id && !String(s._id).startsWith("step-");
+
+        // Resolve assignee to plain string id or null
+        const assigneeId =
+          s.assignee && typeof s.assignee === "object"
+            ? s.assignee._id || null
+            : s.assignee === "Unassigned" || !s.assignee
+            ? null
+            : s.assignee;
+
+        return {
+          // Only include _id for steps that already exist in the database.
+          // Omitting it tells the backend to create rather than update/duplicate.
+          ...(isExistingStep ? { _id: s._id } : {}),
+          title:        s.title        || "",
+          description:  s.description  || "",
+          timeEstimate: s.estimateTime || s.timeEstimate || "",
+          notes:        s.notes        || "",
+          status:       s.status       || "draft",
+          sequenceNo:   s.sequenceNo,
+          order:        s.sequenceNo,
+          assignee:     assigneeId,
+          nodeType:     s.nodeType     || "action",
+        };
+      });
+
+      // Compose only the fields the PATCH endpoint cares about.
+      // Do NOT spread selectedProcess — stale API data causes dirty merges.
+      const payload = {
+        name:        selectedProcess?.name,
+        description: selectedProcess?.description,
+        category:    selectedProcess?.category,
+        visibility:  selectedProcess?.visibility,
+        status:      selectedProcess?.status,
+        settings:    selectedProcess?.settings,
+        assignees: (selectedProcess?.assignees || []).map((a) =>
+          typeof a === "string" ? a : a._id || a.id
+        ),
+        steps: cleanSteps,
       };
-      const result = await processAPI.updateProcess(selectedProcessId, updatedData);
+
+      const result = await processAPI.updateProcess(selectedProcessId, payload);
       if (result.success) {
+        // Reload the process so local step state reflects the server's
+        // authoritative _id values (important for subsequent saves).
+        const refreshed = await processAPI.getProcess(selectedProcessId);
+        if (refreshed.success) {
+          const proc = refreshed.data;
+          setSelectedProcess(proc);
+          const formatted = (proc.steps || [])
+            .map((s, idx) => ({
+              ...s,
+              id:           s._id || `step-${idx}-${Date.now()}`,
+              sequenceNo:   s.sequenceNo || s.order || idx + 1,
+              position:     s.position   || { x: 100 + idx * 300, y: 150 },
+              estimateTime: s.timeEstimate || s.estimateTime || "",
+              nodeType:     s.nodeType || (idx === 0 ? "trigger" : "action"),
+            }))
+            .sort((a, b) => a.sequenceNo - b.sequenceNo);
+          setSteps(formatted);
+          const { nodes: nn, edges: ne } = buildNodesAndEdges(formatted);
+          setNodes(nn);
+          setEdges(ne);
+        }
         if (showToast) toast.success("Process saved successfully!");
       } else {
         toast.error(result.error || "Save failed");
       }
-    } catch {
+    } catch (err) {
+      console.error("[Builder] saveSequence error:", err);
       toast.error("Sync error");
     } finally {
       setIsSaving(false);
     }
-  }, [selectedProcessId, selectedProcess, steps]);
+  }, [selectedProcessId, selectedProcess, steps, setNodes, setEdges]);
 
   const handleClosePanel = useCallback((andSave = false) => {
     if (andSave) saveSequence();

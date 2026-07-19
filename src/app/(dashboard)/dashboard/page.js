@@ -157,29 +157,9 @@ export default function DashboardPage() {
   const activeSparkline  = overview?.processes?.trend
     || [activeProcesses > 2 ? activeProcesses - 2 : 0, activeProcesses > 1 ? activeProcesses - 1 : 0, activeProcesses];
 
-  const activities =
-    overview?.recentActivities?.length > 0
-      ? overview.recentActivities
-      : [
-          {
-            _id: "fallback-1",
-            action: "create_process",
-            message: "Jordan Smith published a new version of Q4 Marketing Workflow.",
-            time: "2 minutes ago",
-          },
-          {
-            _id: "fallback-2",
-            action: "invite_member",
-            message: "Sarah Chen joined the Design System team.",
-            time: "45 minutes ago",
-          },
-          {
-            _id: "fallback-3",
-            action: "complete_task",
-            message: "Automated task completed optimization on Data Pipeline Alpha.",
-            time: "2 hours ago",
-          },
-        ];
+  const activities = overview?.recentActivities?.length > 0
+    ? overview.recentActivities
+    : [];
 
   return (
     <div className="space-y-6">

@@ -84,6 +84,8 @@ export default function EditProcessPage() {
   const [workspaceUsers, setWorkspaceUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [formData, setFormData] = useState(emptyForm);
+  // Track which step IDs are currently being deleted so the UI can show a spinner
+  const [deletingStepIds, setDeletingStepIds] = useState(new Set());
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -227,16 +229,46 @@ export default function EditProcessPage() {
     });
   };
 
-  const removeStep = (stepId) => {
-    setFormData((prev) => {
-      if (prev.steps.length <= 1) return prev;
-      return {
-        ...prev,
-        steps: prev.steps
-          .filter((step) => step.id !== stepId)
-          .map((step, index) => ({ ...step, order: index + 1, sequenceNo: index + 1 })),
-      };
-    });
+  const removeStep = async (stepId) => {
+    if (formData.steps.length <= 1) return;
+
+    const step = formData.steps.find((s) => s.id === stepId);
+
+    // Determine whether this step already exists in the DB.
+    // Steps loaded from the API have a real MongoDB ObjectId in _id.
+    // Newly added steps (created locally) have _id: null and id starting with "step-".
+    const isPersistedStep =
+      step?._id && !String(step._id).startsWith("step-");
+
+    if (isPersistedStep) {
+      // ── Existing step: delete via API immediately ─────────────────────────
+      setDeletingStepIds((prev) => new Set([...prev, stepId]));
+      try {
+        const result = await processAPI.deleteStep(step._id);
+        if (!result.success) {
+          toast.error(result.error || "Failed to delete step. Please try again.");
+          return; // Do NOT remove from local state if API failed
+        }
+        toast.success("Step deleted");
+      } catch (err) {
+        console.error("[EditProcess] deleteStep error:", err);
+        toast.error("Failed to delete step. Please try again.");
+        return;
+      } finally {
+        setDeletingStepIds((prev) => {
+          const next = new Set(prev);
+          next.delete(stepId);
+          return next;
+        });
+      }
+    }
+    // ── Local-only step (not yet saved) OR successful API delete: remove from state ──
+    setFormData((prev) => ({
+      ...prev,
+      steps: prev.steps
+        .filter((s) => s.id !== stepId)
+        .map((s, index) => ({ ...s, order: index + 1, sequenceNo: index + 1 })),
+    }));
   };
 
   const moveStep = (index, direction) => {
@@ -507,10 +539,20 @@ export default function EditProcessPage() {
                       <button
                         type="button"
                         onClick={() => removeStep(step.id)}
-                        className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+                        disabled={deletingStepIds.has(step.id)}
+                        className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <FiTrash2 className="h-4 w-4" />
-                        Remove
+                        {deletingStepIds.has(step.id) ? (
+                          <>
+                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-red-300 border-t-red-600" />
+                            Deleting…
+                          </>
+                        ) : (
+                          <>
+                            <FiTrash2 className="h-4 w-4" />
+                            Remove
+                          </>
+                        )}
                       </button>
                     )}
                   </div>

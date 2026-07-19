@@ -27,13 +27,13 @@ export const processAPI = {
   getProcesses: async (filters = {}) => {
     try {
       const params = new URLSearchParams();
-      if (filters.search) params.append("search", filters.search);
-      if (filters.status) params.append("status", filters.status);
+      if (filters.search)   params.append("search",   filters.search);
+      if (filters.status)   params.append("status",   filters.status);
       if (filters.category) params.append("category", filters.category);
-      if (filters.page) params.append("page", filters.page);
-      if (filters.limit) params.append("limit", filters.limit);
-
-      params.append("_t", Date.now());
+      if (filters.page)     params.append("page",     filters.page);
+      // Clamp limit to backend-safe maximum of 100
+      const limit = filters.limit ? Math.min(Number(filters.limit), 100) : undefined;
+      if (limit)            params.append("limit",    limit);
 
       const response = await api.get(
         `/process/workspace/list${params.toString() ? "?" + params.toString() : ""}`,

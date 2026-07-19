@@ -128,10 +128,11 @@ export const templateAPI = {
    */
   listTemplates: async ({ page = 1, limit = 20, status = "", search = "" } = {}) => {
     try {
-      const params = new URLSearchParams({ page, limit });
+      // Clamp limit to backend-safe maximum of 100
+      const safeLimit = Math.min(Number(limit) || 20, 100);
+      const params = new URLSearchParams({ page, limit: safeLimit });
       if (status && status !== "all") params.append("status", status);
       if (search) params.append("search", search);
-      params.append("_t", Date.now()); // cache-buster
 
       const response = await api.get(`/template/list?${params.toString()}`);
       return {

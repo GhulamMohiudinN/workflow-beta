@@ -5,9 +5,11 @@ export const userAPI = {
    * GET /users/workspace-users
    * Response: { success, analytics, total, page, limit, totalPages, users }
    */
-  getWorkspaceUsers: async ({ page = 1, limit = 100, role = "", search = "" } = {}) => {
+  getWorkspaceUsers: async ({ page = 1, limit = 50, role = "", search = "" } = {}) => {
     try {
-      const params = new URLSearchParams({ page, limit });
+      // Clamp limit to backend-safe maximum of 100
+      const safeLimit = Math.min(Number(limit) || 50, 100);
+      const params = new URLSearchParams({ page, limit: safeLimit });
       if (role && role !== "all") params.append("role", role);
       if (search) params.append("search", search);
 
