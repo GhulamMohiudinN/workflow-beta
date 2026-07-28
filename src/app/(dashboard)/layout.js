@@ -12,6 +12,7 @@ import {
   FiLayout,
   FiList,
   FiSettings,
+  FiShield,
   FiTool,
   FiUsers,
 } from "react-icons/fi";
@@ -21,7 +22,6 @@ import { MdOutlineDashboardCustomize } from "react-icons/md";
 import { RiCompassesLine } from "react-icons/ri";
 import { CiViewList } from "react-icons/ci";
 import { LuChartNoAxesCombined } from "react-icons/lu";
-
 
 import Header from "../../components/Header";
 import Sidebar from "../../components/Sidebar";
@@ -98,6 +98,12 @@ export default function DashboardLayout({ children }) {
       href: "/reports",
       icon: LuChartNoAxesCombined,
       current: pathname.includes("/reports"),
+    });
+    items.push({
+      name: "IRIS Reporting",
+      href: "/iris-reporting",
+      icon: FiShield,
+      current: pathname.includes("/iris-reporting"),
     });
 
     return items;
@@ -178,7 +184,7 @@ export default function DashboardLayout({ children }) {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)]">
+    <div className="min-h-screen bg-(--color-bg)">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}

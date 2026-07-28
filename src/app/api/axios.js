@@ -11,9 +11,6 @@ const backendBase =
 const api = axios.create({
   baseURL: `${backendBase.replace(/\/api\/v1$/, "")}/api/v1`,
   timeout: 30000,
-  headers: {
-    "Content-Type": "application/json",
-  },
 });
 
 // Request interceptor — attach auth token + log every outgoing request
@@ -22,8 +19,26 @@ api.interceptors.request.use(
     const token =
       localStorage.getItem("token") || localStorage.getItem("accessToken");
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers = {
+        ...config.headers,
+        Authorization: `Bearer ${token}`,
+      };
     }
+
+    // Allow browser/axios to set multipart boundaries for file uploads
+    if (config.data instanceof FormData) {
+      config.headers = {
+        ...config.headers,
+      };
+      delete config.headers["Content-Type"];
+      delete config.headers["content-type"];
+    } else {
+      config.headers = {
+        "Content-Type": "application/json",
+        ...config.headers,
+      };
+    }
+
     // Attach a timestamp so we can compute duration in the response interceptor
     config.metadata = { startTime: Date.now() };
 
