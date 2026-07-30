@@ -1,720 +1,1093 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  FiAlertCircle,
-  FiCheckCircle,
-  FiClock,
-  FiDatabase,
-  FiPlus,
-  FiShield,
-  FiTrash2,
-  FiUploadCloud,
+  FiAlertCircle, FiAlertTriangle, FiCheckCircle, FiChevronDown,
+  FiChevronUp, FiClock, FiDatabase, FiDownload, FiEdit2,
+  FiFileText, FiMessageSquare, FiPlus, FiRefreshCw,
+  FiSend, FiShield, FiTrash2, FiUploadCloud, FiUser, FiX,
 } from "react-icons/fi";
+import toast, { Toaster } from "react-hot-toast";
 import { irisReportingAPI } from "../../api/irisReportingAPI";
 
-const statCardClass =
-  "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
+// ─── Constants ────────────────────────────────────────────────────────────────
+const TABS = ["Dashboard", "Obligations", "Approvals", "Report Pack"];
 
+const STATUS_META = {
+  planned:     { label: "Planned",     color: "bg-slate-100 text-slate-600",     dot: "bg-slate-400"    },
+  in_progress: { label: "In Progress", color: "bg-amber-100 text-amber-700",     dot: "bg-amber-500"    },
+  completed:   { label: "Completed",   color: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500"  },
+  blocked:     { label: "Blocked",     color: "bg-red-100 text-red-700",         dot: "bg-red-500"      },
+};
+
+const APPROVAL_META = {
+  pending:      { label: "Pending",      color: "text-amber-700 bg-amber-50 border-amber-200"       },
+  approved:     { label: "Approved",     color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+  rejected:     { label: "Rejected",     color: "text-red-700 bg-red-50 border-red-200"             },
+  not_required: { label: "Not Required", color: "text-slate-600 bg-slate-50 border-slate-200"       },
+};
+
+const MAT_COLOR = {
+  Low:      "bg-slate-100 text-slate-600",
+  Standard: "bg-blue-100 text-blue-700",
+  Medium:   "bg-amber-100 text-amber-700",
+  High:     "bg-orange-100 text-orange-700",
+  Critical: "bg-red-100 text-red-700",
+};
+
+const EMPTY_FORM = {
+  title: "", source: "", legislationRef: "", category: "Reporting",
+  obligationType: "reporting", status: "planned", dueDate: "",
+  owner: "", reportType: "Statutory report", materiality: "Standard",
+  approvalRequired: false, evidenceRequired: [""], details: "",
+  legislationVersion: "", ruleVersion: "1.0", reportingPeriod: "",
+};
+
+// ─── Shared UI ────────────────────────────────────────────────────────────────
+function StatusBadge({ status }) {
+  const m = STATUS_META[status] || STATUS_META.planned;
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${m.color}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${m.dot}`} />
+      {m.label}
+    </span>
+  );
+}
+
+function ApprovalBadge({ status }) {
+  const m = APPROVAL_META[status] || APPROVAL_META.not_required;
+  return <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-bold ${m.color}`}>{m.label}</span>;
+}
+
+function MatBadge({ value }) {
+  return <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${MAT_COLOR[value] || MAT_COLOR.Standard}`}>{value}</span>;
+}
+
+function StatCard({ label, value, sub, icon: Icon, tone }) {
+  const tones = {
+    blue:    { bg: "bg-blue-50",    text: "text-blue-700"    },
+    emerald: { bg: "bg-emerald-50", text: "text-emerald-700" },
+    amber:   { bg: "bg-amber-50",   text: "text-amber-700"   },
+    red:     { bg: "bg-red-50",     text: "text-red-700"     },
+    slate:   { bg: "bg-slate-50",   text: "text-slate-700"   },
+  };
+  const t = tones[tone] || tones.slate;
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">{label}</p>
+          <p className={`mt-2 text-3xl font-black ${t.text}`}>{value ?? "—"}</p>
+          {sub && <p className="mt-1 text-xs font-medium text-slate-400">{sub}</p>}
+        </div>
+        <div className={`rounded-lg p-2.5 ${t.bg}`}><Icon size={16} className={t.text} /></div>
+      </div>
+    </div>
+  );
+}
+
+function ProgressBar({ value, color = "bg-blue-600" }) {
+  return (
+    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+      <div className={`h-full rounded-full transition-all duration-700 ${color}`} style={{ width: `${Math.min(100, Math.max(0, value))}%` }} />
+    </div>
+  );
+}
+
+function Tab({ label, active, onClick, count }) {
+  return (
+    <button onClick={onClick}
+      className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold transition-all whitespace-nowrap ${
+        active ? "border-blue-700 text-blue-700" : "border-transparent text-slate-500 hover:text-slate-900"
+      }`}>
+      {label}
+      {count !== undefined && (
+        <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${active ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>{count}</span>
+      )}
+    </button>
+  );
+}
+
+// ─── Obligation Form ──────────────────────────────────────────────────────────
+function ObligationForm({ form, setForm, onSubmit, saving, onCancel, editId, pendingFiles, setPendingFiles }) {
+  const dropRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
+
+  const addFiles = (fileList) => {
+    const incoming = Array.from(fileList).filter((f) => f.size <= 10 * 1024 * 1024);
+    const oversize = Array.from(fileList).length - incoming.length;
+    if (oversize > 0) toast.error(`${oversize} file(s) skipped — max 10 MB each`);
+    setPendingFiles((prev) => {
+      // Deduplicate by name+size
+      const existing = new Set(prev.map((f) => `${f.name}-${f.size}`));
+      return [...prev, ...incoming.filter((f) => !existing.has(`${f.name}-${f.size}`))];
+    });
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    if (e.dataTransfer.files) addFiles(e.dataTransfer.files);
+  };
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-black text-slate-900">{editId ? "Edit Obligation" : "New Obligation"}</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Capture the reporting requirement, source legislation, owner and evidence needs.</p>
+        </div>
+        <button type="button" onClick={onCancel} className="text-slate-400 hover:text-slate-600"><FiX size={18} /></button>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <label className="text-xs font-semibold text-slate-600 mb-1 block">Obligation Title *</label>
+          <input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
+            placeholder="e.g. Annual Financial Statements — FMA s.51"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-600 mb-1 block">Source Legislation</label>
+          <input value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })}
+            placeholder="e.g. Financial Management Act 1994 (Vic)"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-blue-500 outline-none" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-600 mb-1 block">Legislation Reference</label>
+          <input value={form.legislationRef} onChange={(e) => setForm({ ...form, legislationRef: e.target.value })}
+            placeholder="e.g. SD 4.2.1(a)"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-blue-500 outline-none" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-600 mb-1 block">Category</label>
+          <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-blue-500 outline-none">
+            {["Reporting","Legislation","Policy","Accounting standard","Compliance","Other"].map((c) => <option key={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-600 mb-1 block">Obligation Type</label>
+          <select value={form.obligationType} onChange={(e) => setForm({ ...form, obligationType: e.target.value })}
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-blue-500 outline-none">
+            {["statutory_reporting","compliance_review","disclosure_pack","audit_evidence","reporting","approval","other"].map((t) => (
+              <option key={t} value={t}>{t.replace(/_/g, " ")}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-600 mb-1 block">Owner</label>
+          <input value={form.owner} onChange={(e) => setForm({ ...form, owner: e.target.value })}
+            placeholder="e.g. Chief Finance Officer"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-blue-500 outline-none" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-600 mb-1 block">Due Date</label>
+          <input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-blue-500 outline-none" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-600 mb-1 block">Status</label>
+          <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-blue-500 outline-none">
+            <option value="planned">Planned</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="blocked">Blocked</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-600 mb-1 block">Materiality</label>
+          <select value={form.materiality} onChange={(e) => setForm({ ...form, materiality: e.target.value })}
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-blue-500 outline-none">
+            {["Low","Standard","Medium","High","Critical"].map((m) => <option key={m}>{m}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-600 mb-1 block">Report Type</label>
+          <input value={form.reportType} onChange={(e) => setForm({ ...form, reportType: e.target.value })}
+            placeholder="e.g. Financial statements"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-blue-500 outline-none" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-600 mb-1 block">Reporting Period</label>
+          <input value={form.reportingPeriod} onChange={(e) => setForm({ ...form, reportingPeriod: e.target.value })}
+            placeholder="e.g. FY2025-26"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-blue-500 outline-none" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-600 mb-1 block">Legislation Version</label>
+          <input value={form.legislationVersion} onChange={(e) => setForm({ ...form, legislationVersion: e.target.value })}
+            placeholder="e.g. FMA 1994 — 2018 Amendment"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-blue-500 outline-none" />
+        </div>
+        <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+          <input type="checkbox" id="approvalRequired" checked={form.approvalRequired}
+            onChange={(e) => setForm({ ...form, approvalRequired: e.target.checked })}
+            className="h-4 w-4 rounded border-slate-300 text-blue-700" />
+          <label htmlFor="approvalRequired" className="text-sm font-medium text-slate-700">Approval workflow required</label>
+        </div>
+      </div>
+
+      <div>
+        <label className="text-xs font-semibold text-slate-600 mb-1 block">Details / Context</label>
+        <textarea value={form.details} rows={3} onChange={(e) => setForm({ ...form, details: e.target.value })}
+          placeholder="Describe the obligation, specific requirements and context..."
+          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-blue-500 outline-none resize-none" />
+      </div>
+
+      <div>
+        <label className="text-xs font-semibold text-slate-600 mb-2 block">Evidence Requirements</label>
+        <div className="space-y-2">
+          {form.evidenceRequired.map((item, i) => (
+            <div key={i} className="flex gap-2">
+              <input value={item}
+                onChange={(e) => { const n = [...form.evidenceRequired]; n[i] = e.target.value; setForm({ ...form, evidenceRequired: n }); }}
+                placeholder={`Evidence item ${i + 1}`}
+                className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+              <button type="button"
+                onClick={() => { const n = form.evidenceRequired.filter((_, idx) => idx !== i); setForm({ ...form, evidenceRequired: n.length ? n : [""] }); }}
+                className="rounded-lg border border-slate-200 bg-white px-3 text-sm text-red-500 hover:bg-red-50">
+                <FiX size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+        <button type="button"
+          onClick={() => setForm({ ...form, evidenceRequired: [...form.evidenceRequired, ""] })}
+          className="mt-2 flex items-center gap-1.5 text-xs font-bold text-blue-700 hover:text-blue-900">
+          <FiPlus size={12} /> Add evidence item
+        </button>
+      </div>
+
+      {/* ── Document Upload Section ──────────────────────────────────────── */}
+      <div>
+        <label className="text-xs font-semibold text-slate-600 mb-2 block">
+          Attach Supporting Documents
+          <span className="ml-2 font-normal text-slate-400">(PDF, Word, Excel, Images, ZIP — max 10 MB each)</span>
+        </label>
+
+        {/* Drop zone */}
+        <div
+          ref={dropRef}
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={handleDrop}
+          className={`relative rounded-xl border-2 border-dashed transition-colors ${
+            dragging ? "border-blue-500 bg-blue-50" : "border-slate-300 bg-white hover:border-blue-400 hover:bg-blue-50/40"
+          }`}
+        >
+          <label className="flex cursor-pointer flex-col items-center justify-center gap-2 py-6 px-4 text-center">
+            <FiUploadCloud size={28} className={dragging ? "text-blue-600" : "text-slate-400"} />
+            <div>
+              <p className="text-sm font-semibold text-slate-700">
+                {dragging ? "Drop files here" : "Drag & drop files, or click to browse"}
+              </p>
+              <p className="text-xs text-slate-400 mt-0.5">All files will be uploaded when you save the obligation</p>
+            </div>
+            <input
+              type="file"
+              multiple
+              className="hidden"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.zip,.csv"
+              onChange={(e) => { if (e.target.files) addFiles(e.target.files); }}
+            />
+          </label>
+        </div>
+
+        {/* Pending file list */}
+        {pendingFiles.length > 0 && (
+          <div className="mt-3 space-y-2">
+            <p className="text-xs font-bold text-slate-500">{pendingFiles.length} file{pendingFiles.length > 1 ? "s" : ""} queued for upload</p>
+            {pendingFiles.map((file, idx) => {
+              const ext = file.name.split(".").pop()?.toLowerCase();
+              const iconColor =
+                ext === "pdf" ? "text-red-500" :
+                ["doc","docx"].includes(ext) ? "text-blue-600" :
+                ["xls","xlsx"].includes(ext) ? "text-emerald-600" :
+                ["png","jpg","jpeg"].includes(ext) ? "text-violet-500" : "text-slate-400";
+              return (
+                <div key={`${file.name}-${idx}`}
+                  className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <FiFileText size={14} className={`${iconColor} shrink-0`} />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-slate-800 truncate">{file.name}</p>
+                      <p className="text-[11px] text-slate-400">{(file.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                  </div>
+                  <button type="button"
+                    onClick={() => setPendingFiles((prev) => prev.filter((_, i) => i !== idx))}
+                    className="ml-2 shrink-0 rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+                    <FiX size={13} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3 pt-2 border-t border-slate-200">
+        <button type="submit" disabled={saving}
+          className="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-800 disabled:opacity-50 transition-colors">
+          {saving ? "Saving…" : editId ? "Update Obligation" : "Create Obligation"}
+        </button>
+        <button type="button" onClick={onCancel}
+          className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// ─── Obligation Card ──────────────────────────────────────────────────────────
+function ObligationCard({
+  item, onEdit, onDelete, onUpload, onDeleteFile, onDownload,
+  uploading, onApproveStep, onAddComment, onDeleteComment,
+}) {
+  const [expanded,      setExpanded]      = useState(false);
+  const [activeSection, setActiveSection] = useState("evidence"); // evidence | comments | approval
+  const [commentText,   setCommentText]   = useState("");
+  const [submitting,    setSubmitting]    = useState(false);
+
+  const overdue = item.dueDate && new Date(item.dueDate) < new Date() && item.status !== "completed";
+  // Unique ID for the hidden file input — avoids ref issues on re-render
+  const inputId = `file-upload-${item._id}`;
+
+  const handleComment = async (e) => {
+    e.preventDefault();
+    if (!commentText.trim()) return;
+    setSubmitting(true);
+    await onAddComment(item._id, commentText.trim());
+    setCommentText("");
+    setSubmitting(false);
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Capture the input ref BEFORE any async work so we can reset it after
+    const input = e.target;
+    await onUpload(item._id, file);
+    // Reset input after upload completes — never before — so the File object
+    // stays valid for the entire duration of the multipart request.
+    input.value = "";
+  };
+
+  return (
+    <div className={`rounded-2xl border shadow-sm overflow-hidden transition-all ${overdue ? "border-red-200 bg-red-50/30" : "border-slate-200 bg-white"}`}>
+
+      {/* ── Header row ──────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-start justify-between gap-3 p-5">
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 mb-1.5">
+            <StatusBadge status={item.status} />
+            <MatBadge value={item.materiality} />
+            {item.approvalRequired && <ApprovalBadge status={item.approvalStatus || "pending"} />}
+            {overdue && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-[11px] font-bold text-red-700">
+                <FiAlertTriangle size={10} /> Overdue
+              </span>
+            )}
+          </div>
+          <h3 className="text-sm font-black text-slate-900 leading-snug">{item.title}</h3>
+          {item.legislationRef && (
+            <p className="text-xs font-mono text-slate-400 mt-0.5">{item.legislationRef}</p>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button onClick={() => setExpanded((v) => !v)}
+            className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50 transition-colors"
+            title={expanded ? "Collapse" : "Expand"}>
+            {expanded ? <FiChevronUp size={14} /> : <FiChevronDown size={14} />}
+          </button>
+          <button onClick={() => onEdit(item)}
+            className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50 transition-colors" title="Edit">
+            <FiEdit2 size={14} />
+          </button>
+          <button onClick={() => onDelete(item._id)}
+            className="rounded-lg border border-red-200 p-2 text-red-500 hover:bg-red-50 transition-colors" title="Delete">
+            <FiTrash2 size={14} />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Meta row ────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-5 pb-4 border-t border-slate-100 pt-3">
+        {[
+          { label: "Source",   value: item.source || "—"           },
+          { label: "Owner",    value: item.owner  || "—"           },
+          { label: "Due Date", value: item.dueDate
+              ? new Date(item.dueDate).toLocaleDateString("en-AU", { day:"2-digit", month:"short", year:"numeric" })
+              : "Not set", red: overdue },
+          { label: "Period",   value: item.reportingPeriod || "—"  },
+        ].map(({ label, value, red }) => (
+          <div key={label}>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+            <p className={`text-xs font-semibold mt-0.5 truncate ${red ? "text-red-600" : "text-slate-700"}`}>{value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Expanded body ────────────────────────────────────────────────── */}
+      {expanded && (
+        <div className="border-t border-slate-100">
+
+          {/* Details */}
+          {item.details && (
+            <div className="px-5 pt-4 pb-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Details</p>
+              <p className="text-sm text-slate-600 leading-relaxed">{item.details}</p>
+            </div>
+          )}
+
+          {/* Required evidence chips */}
+          {item.evidenceRequired?.filter(Boolean).length > 0 && (
+            <div className="px-5 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Required Evidence</p>
+              <div className="flex flex-wrap gap-2">
+                {item.evidenceRequired.filter(Boolean).map((ev, i) => (
+                  <span key={i} className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700">{ev}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Section switcher */}
+          <div className="flex border-t border-slate-100 bg-slate-50">
+            {[
+              { key: "evidence", label: `Evidence (${item.evidenceFiles?.length || 0})` },
+              { key: "comments", label: `Comments (${item.comments?.length || 0})` },
+              ...(item.approvalRequired
+                ? [{ key: "approval", label: `Approval (${item.approvalSteps?.length || 0})` }]
+                : []),
+            ].map(({ key, label }) => (
+              <button key={key} onClick={() => setActiveSection(key)}
+                className={`px-4 py-2.5 text-xs font-bold transition-colors ${
+                  activeSection === key
+                    ? "border-b-2 border-blue-700 text-blue-700 bg-white"
+                    : "text-slate-500 hover:text-slate-900"
+                }`}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* ── Evidence Files section ───────────────────────────────────── */}
+          {activeSection === "evidence" && (
+            <div className="px-5 py-4">
+              {/* Upload button — uses label+id, never .click() */}
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold text-slate-600">
+                  {item.evidenceFiles?.length
+                    ? `${item.evidenceFiles.length} file${item.evidenceFiles.length > 1 ? "s" : ""} attached`
+                    : "No files attached yet"}
+                </p>
+                <label htmlFor={inputId}
+                  className={`flex items-center gap-1.5 cursor-pointer rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 transition-colors ${uploading === item._id ? "opacity-60 pointer-events-none" : ""}`}>
+                  <FiUploadCloud size={13} />
+                  {uploading === item._id ? "Uploading…" : "Attach Document"}
+                </label>
+                <input
+                  id={inputId}
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.zip,.csv"
+                  onChange={handleFileChange}
+                  disabled={uploading === item._id}
+                />
+              </div>
+
+              {/* Accepted file types hint */}
+              <p className="text-[11px] text-slate-400 mb-3">
+                Accepted: PDF, Word, Excel, Images, ZIP, CSV — max 10 MB
+              </p>
+
+              {item.evidenceFiles?.length > 0 ? (
+                <div className="space-y-2">
+                  {item.evidenceFiles.map((file) => {
+                    const ext = file.fileName.split(".").pop()?.toLowerCase();
+                    const iconColor =
+                      ext === "pdf" ? "text-red-500" :
+                      ["doc","docx"].includes(ext) ? "text-blue-600" :
+                      ["xls","xlsx"].includes(ext) ? "text-emerald-600" :
+                      ["png","jpg","jpeg"].includes(ext) ? "text-violet-500" : "text-slate-400";
+                    return (
+                      <div key={file._id}
+                        className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2.5 hover:border-slate-300 transition-colors">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <FiFileText size={15} className={`${iconColor} shrink-0`} />
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-slate-800 truncate">{file.fileName}</p>
+                            <p className="text-[11px] text-slate-400">
+                              {(file.fileSize / 1024).toFixed(1)} KB
+                              {" · "}
+                              {new Date(file.uploadedAt).toLocaleDateString("en-AU", { day:"2-digit", month:"short", year:"numeric" })}
+                              {file.uploadedBy && file.uploadedBy !== "System" && ` · ${file.uploadedBy}`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 shrink-0 ml-2">
+                          <button onClick={() => onDownload(item._id, file._id)}
+                            className="flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-[11px] font-bold text-blue-700 hover:bg-blue-100 transition-colors">
+                            <FiDownload size={11} /> View
+                          </button>
+                          <button onClick={() => onDeleteFile(item._id, file._id)}
+                            className="rounded-lg border border-red-100 bg-red-50 px-2.5 py-1.5 text-[11px] font-bold text-red-600 hover:bg-red-100 transition-colors">
+                            <FiTrash2 size={11} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 py-8 text-center">
+                  <FiUploadCloud size={24} className="text-slate-300 mb-2" />
+                  <p className="text-xs font-semibold text-slate-400">
+                    Click &ldquo;Attach Document&rdquo; to upload evidence
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Comments section ─────────────────────────────────────────── */}
+          {activeSection === "comments" && (
+            <div className="px-5 py-4 space-y-3">
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {item.comments?.length > 0 ? item.comments.map((c) => (
+                  <div key={c._id} className="flex items-start gap-2 rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5">
+                    <div className="h-6 w-6 shrink-0 rounded-full bg-blue-100 flex items-center justify-center">
+                      <FiUser size={11} className="text-blue-700" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-bold text-slate-500">
+                        {c.authorName}
+                        {" · "}
+                        {new Date(c.createdAt).toLocaleDateString("en-AU", { day:"2-digit", month:"short" })}
+                      </p>
+                      <p className="text-xs text-slate-800 mt-0.5">{c.text}</p>
+                    </div>
+                    <button onClick={() => onDeleteComment(item._id, c._id)}
+                      className="text-slate-300 hover:text-red-500 transition-colors shrink-0 mt-0.5">
+                      <FiX size={12} />
+                    </button>
+                  </div>
+                )) : (
+                  <p className="text-xs text-slate-400 italic text-center py-4">No comments yet.</p>
+                )}
+              </div>
+              <form onSubmit={handleComment} className="flex gap-2 pt-1 border-t border-slate-100">
+                <input value={commentText} onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="Add a reviewer note or comment…"
+                  className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs focus:border-blue-500 outline-none" />
+                <button type="submit" disabled={!commentText.trim() || submitting}
+                  className="rounded-lg bg-blue-700 px-3 py-2 text-white disabled:opacity-40 hover:bg-blue-800 transition-colors">
+                  <FiSend size={13} />
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* ── Approval steps section ───────────────────────────────────── */}
+          {activeSection === "approval" && item.approvalRequired && (
+            <div className="px-5 py-4 space-y-2">
+              {item.approvalSteps?.length > 0 ? item.approvalSteps.map((step, idx) => (
+                <div key={step._id}
+                  className={`flex items-center justify-between rounded-xl border p-3 ${
+                    step.status === "approved" ? "border-emerald-200 bg-emerald-50" :
+                    step.status === "rejected" ? "border-red-200 bg-red-50" : "border-slate-200 bg-white"
+                  }`}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${
+                      step.status === "approved" ? "bg-emerald-600 text-white" :
+                      step.status === "rejected" ? "bg-red-600 text-white" : "bg-slate-200 text-slate-600"
+                    }`}>{idx + 1}</span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-black text-slate-900 truncate">{step.stepName}</p>
+                      {step.assignedTo && <p className="text-[11px] text-slate-500">{step.assignedTo}</p>}
+                      {step.notes && <p className="text-[11px] italic text-slate-500">&ldquo;{step.notes}&rdquo;</p>}
+                    </div>
+                  </div>
+                  <div className="shrink-0 ml-2">
+                    {step.status === "pending" ? (
+                      <div className="flex gap-1.5">
+                        <button onClick={() => onApproveStep(item._id, step._id, "approved")}
+                          className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100">
+                          Approve
+                        </button>
+                        <button onClick={() => onApproveStep(item._id, step._id, "rejected")}
+                          className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-bold text-red-700 hover:bg-red-100">
+                          Reject
+                        </button>
+                      </div>
+                    ) : (
+                      <ApprovalBadge status={step.status} />
+                    )}
+                  </div>
+                </div>
+              )) : (
+                <p className="text-xs text-slate-400 italic text-center py-4">
+                  No approval steps configured. Add steps when editing this obligation.
+                </p>
+              )}
+            </div>
+          )}
+
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function IrisReportingPage() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [data, setData] = useState(null);
-  const [form, setForm] = useState({
-    title: "",
-    source: "",
-    category: "Reporting",
-    obligationType: "reporting",
-    status: "planned",
-    dueDate: "",
-    owner: "",
-    reportType: "Statutory report",
-    materiality: "Standard",
-    approvalRequired: false,
-    evidenceRequired: [""],
-    details: "",
-  });
-  const [saving, setSaving] = useState(false);
-  const [activeRequirementId, setActiveRequirementId] = useState(null);
-  const [uploadingFileId, setUploadingFileId] = useState(null);
+  const [activeTab,    setActiveTab]    = useState("Dashboard");
+  const [loading,      setLoading]      = useState(true);
+  const [refreshing,   setRefreshing]   = useState(false);
+  const [error,        setError]        = useState(null);
+  const [data,         setData]         = useState(null);
+  const [showForm,     setShowForm]     = useState(false);
+  const [editId,       setEditId]       = useState(null);
+  const [form,         setForm]         = useState(EMPTY_FORM);
+  const [saving,       setSaving]       = useState(false);
+  const [uploadingId,  setUploadingId]  = useState(false);
+  const [filterStatus, setFilterStatus] = useState("all");
   const [pendingFiles, setPendingFiles] = useState([]);
 
-  useEffect(() => {
-    loadData();
+  const summary      = useMemo(() => data?.summary      || null, [data]);
+  const requirements = useMemo(() => data?.requirements || [],   [data]);
+
+  const filtered = useMemo(() => {
+    if (filterStatus === "all") return requirements;
+    return requirements.filter((r) => r.status === filterStatus);
+  }, [requirements, filterStatus]);
+
+  const pendingApprovals = useMemo(() =>
+    requirements.filter((r) => r.approvalRequired && (!r.approvalStatus || r.approvalStatus === "pending")),
+  [requirements]);
+
+  const loadData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+    setError(null);
+    const res = await irisReportingAPI.getOverview();
+    if (res.success) setData(res.data);
+    else setError(res.error || "Unable to load IRIS reporting data");
+    setLoading(false);
+    setRefreshing(false);
   }, []);
 
-  const summary = useMemo(() => data?.summary || null, [data]);
-  const requirements = useMemo(() => data?.requirements || [], [data]);
+  useEffect(() => { loadData(); }, [loadData]);
 
-  const resetForm = () => {
-    setForm({
-      title: "",
-      source: "",
-      category: "Reporting",
-      obligationType: "reporting",
-      status: "planned",
-      dueDate: "",
-      owner: "",
-      reportType: "Statutory report",
-      materiality: "Standard",
-      approvalRequired: false,
-      evidenceRequired: [""],
-      details: "",
-    });
-    setActiveRequirementId(null);
-    setPendingFiles([]);
-  };
+  const resetForm = () => { setForm(EMPTY_FORM); setEditId(null); setShowForm(false); setPendingFiles([]); };
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const overview = await irisReportingAPI.getOverview();
-      if (!overview.success) {
-        setError(overview.error || "Unable to load IRIS reporting data");
-        return;
-      }
-      setData(overview.data);
-    } catch (err) {
-      setError(err.message || "Unable to load IRIS reporting data");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    const payload = { ...form, evidenceRequired: form.evidenceRequired.filter(Boolean) };
+    const res = editId
+      ? await irisReportingAPI.updateRequirement(editId, payload)
+      : await irisReportingAPI.createRequirement(payload);
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    try {
-      setSaving(true);
-      const payload = {
-        ...form,
-        evidenceRequired: form.evidenceRequired.filter(Boolean),
-      };
-      const response = activeRequirementId
-        ? await irisReportingAPI.updateRequirement(activeRequirementId, payload)
-        : await irisReportingAPI.createRequirement(payload);
-      if (!response.success) {
-        setError(response.error || "Unable to save requirement");
-        return;
-      }
-
-      // Upload any pending files
-      const requirementId =
-        response.data?.requirement?._id || activeRequirementId;
-      if (pendingFiles.length > 0 && requirementId) {
+    if (res.success) {
+      // Upload any pending files queued in the form
+      const targetId = res.requirementId || editId;
+      if (pendingFiles.length > 0 && targetId) {
+        setUploadingId(targetId);
         for (const file of pendingFiles) {
-          await irisReportingAPI.uploadEvidenceFile(requirementId, file);
+          const uploadRes = await irisReportingAPI.uploadEvidenceFile(targetId, file);
+          if (!uploadRes.success) toast.error(`Failed to upload ${file.name}`);
         }
+        setUploadingId(null);
       }
-
-      await loadData();
+      toast.success(editId ? "Obligation updated" : "Obligation created");
+      await loadData(true);
       resetForm();
-    } catch (err) {
-      setError(err.message || "Unable to save requirement");
-    } finally {
-      setSaving(false);
+    } else {
+      toast.error(res.error || "Failed to save");
     }
+    setSaving(false);
   };
 
-  const handleDelete = async (requirementId) => {
-    try {
-      const response = await irisReportingAPI.deleteRequirement(requirementId);
-      if (!response.success) {
-        setError(response.error || "Unable to delete requirement");
-        return;
-      }
-      await loadData();
-    } catch (err) {
-      setError(err.message || "Unable to delete requirement");
-    }
-  };
-
-  const startEdit = (item) => {
-    setActiveRequirementId(item._id || item.id);
+  const handleEdit = (item) => {
+    setEditId(item._id);
     setForm({
-      title: item.title || "",
-      source: item.source || "",
-      category: item.category || "Reporting",
-      obligationType: item.obligationType || "reporting",
-      status: item.status || "planned",
-      dueDate: item.dueDate
-        ? new Date(item.dueDate).toISOString().slice(0, 10)
-        : "",
-      owner: item.owner || "",
-      reportType: item.reportType || "Statutory report",
-      materiality: item.materiality || "Standard",
-      approvalRequired: Boolean(item.approvalRequired),
-      evidenceRequired:
-        Array.isArray(item.evidenceRequired) && item.evidenceRequired.length
-          ? item.evidenceRequired
-          : [""],
-      details: item.details || "",
+      title: item.title || "", source: item.source || "",
+      legislationRef: item.legislationRef || "", category: item.category || "Reporting",
+      obligationType: item.obligationType || "reporting", status: item.status || "planned",
+      dueDate: item.dueDate ? new Date(item.dueDate).toISOString().slice(0, 10) : "",
+      owner: item.owner || "", reportType: item.reportType || "Statutory report",
+      materiality: item.materiality || "Standard", approvalRequired: Boolean(item.approvalRequired),
+      evidenceRequired: item.evidenceRequired?.length ? item.evidenceRequired : [""],
+      details: item.details || "", legislationVersion: item.legislationVersion || "",
+      ruleVersion: item.ruleVersion || "1.0", reportingPeriod: item.reportingPeriod || "",
     });
+    setShowForm(true);
+    setActiveTab("Obligations");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleFileUpload = async (requirementId, file) => {
-    if (!file) return;
-    try {
-      setUploadingFileId(requirementId);
-      const response = await irisReportingAPI.uploadEvidenceFile(
-        requirementId,
-        file,
-      );
-      if (!response.success) {
-        setError(response.error || "Unable to upload file");
-        return;
-      }
-      await loadData();
-    } catch (err) {
-      setError(err.message || "Unable to upload file");
-    } finally {
-      setUploadingFileId(null);
-    }
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this obligation? This cannot be undone.")) return;
+    const res = await irisReportingAPI.deleteRequirement(id);
+    if (res.success) { toast.success("Obligation deleted"); await loadData(true); }
+    else toast.error(res.error || "Failed to delete");
   };
 
-  const handleDownloadFile = async (requirementId, fileId, fileName) => {
-    try {
-      const response = await irisReportingAPI.downloadEvidenceFile(
-        requirementId,
-        fileId,
-        fileName,
-      );
-      if (!response.success) {
-        setError(response.error || "Unable to download file");
-      }
-    } catch (err) {
-      setError(err.message || "Unable to download file");
-    }
+  const handleUpload = async (reqId, file) => {
+    setUploadingId(reqId);
+    const res = await irisReportingAPI.uploadEvidenceFile(reqId, file);
+    if (res.success) { toast.success("File uploaded"); await loadData(true); }
+    else toast.error(res.error || "Upload failed");
+    setUploadingId(null);
   };
 
-  const handleDeleteFile = async (requirementId, fileId) => {
-    try {
-      const response = await irisReportingAPI.deleteEvidenceFile(
-        requirementId,
-        fileId,
-      );
-      if (!response.success) {
-        setError(response.error || "Unable to delete file");
-        return;
-      }
-      await loadData();
-    } catch (err) {
-      setError(err.message || "Unable to delete file");
-    }
+  const handleDeleteFile = async (reqId, fileId) => {
+    const res = await irisReportingAPI.deleteEvidenceFile(reqId, fileId);
+    if (res.success) { toast.success("File deleted"); await loadData(true); }
+    else toast.error(res.error || "Delete failed");
   };
 
+  const handleDownload = (reqId, fileId) =>
+    irisReportingAPI.downloadEvidenceFile(reqId, fileId);
+
+  const handleApproveStep = async (reqId, stepId, decision) => {
+    const notes = decision === "rejected"
+      ? (window.prompt("Reason for rejection (optional):") || "")
+      : "";
+    const res = await irisReportingAPI.decideApprovalStep(reqId, stepId, decision, notes);
+    if (res.success) { toast.success(`Step ${decision}`); await loadData(true); }
+    else toast.error(res.error || "Action failed");
+  };
+
+  const handleAddComment = async (reqId, text) => {
+    const res = await irisReportingAPI.addComment(reqId, text);
+    if (res.success) await loadData(true);
+    else toast.error(res.error || "Comment failed");
+  };
+
+  const handleDeleteComment = async (reqId, commentId) => {
+    const res = await irisReportingAPI.deleteComment(reqId, commentId);
+    if (res.success) await loadData(true);
+    else toast.error(res.error || "Failed");
+  };
+
+  // ── Loading & Error states ─────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-600">
-        Loading IRIS reporting workspace…
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-blue-100 border-t-blue-700" />
+          <p className="text-sm font-semibold text-slate-500">Loading IRIS workspace…</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-sm text-red-700">
-        <div className="mb-2 flex items-center gap-2 font-semibold">
-          <FiAlertCircle /> Unable to load reporting workspace
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-8">
+        <div className="flex items-center gap-2 font-bold text-red-700 mb-2">
+          <FiAlertCircle /> Unable to load IRIS reporting
         </div>
-        <p>{error}</p>
+        <p className="text-sm text-red-600 mb-4">{error}</p>
+        <button onClick={() => loadData()}
+          className="rounded-lg bg-red-700 px-4 py-2 text-sm font-bold text-white hover:bg-red-800">
+          Retry
+        </button>
       </div>
     );
   }
 
+  // ── Main render ────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-slate-200 bg-linear-to-br from-slate-900 to-slate-700 p-8 text-white shadow-sm">
+      <Toaster position="top-right" />
+
+      {/* Hero Header */}
+      <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 to-slate-700 p-6 sm:p-8 text-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-300">
-              IRIS Reporting and Evidence Map
-            </p>
-            <h1 className="mt-2 text-3xl font-black">
-              Policy-driven statutory reporting workspace
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm text-slate-300">
-              Configure obligations, assign evidence requirements, and track
-              reporting progress using a structured compliance workflow.
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">IRIS Reporting and Evidence Map</p>
+            <h1 className="mt-2 text-2xl sm:text-3xl font-black">Policy-Driven Statutory Reporting</h1>
+            <p className="mt-2 max-w-2xl text-sm text-slate-300">
+              Configure obligations, assign evidence requirements, and track reporting progress — from the Financial Management Act 1994 through to AASB/IFRS compliance.
             </p>
           </div>
-          <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm">
-            <div className="flex items-center gap-2 font-semibold">
-              <FiShield /> Compliance score {summary?.complianceScore ?? 0}%
+          <div className="flex items-center gap-4">
+            <div className="rounded-2xl border border-white/20 bg-white/10 px-5 py-4 text-center">
+              <p className="text-3xl font-black text-white">{summary?.complianceScore ?? 0}%</p>
+              <p className="text-xs font-semibold text-slate-300 mt-0.5">Compliance Score</p>
             </div>
-            <div className="mt-1 text-slate-300">
-              {summary?.total ?? 0} obligations tracked
-            </div>
+            <button onClick={() => loadData(true)} disabled={refreshing}
+              className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-bold text-white hover:bg-white/20 transition-colors disabled:opacity-50">
+              <FiRefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+              Refresh
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className={statCardClass}>
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Total obligations
-          </div>
-          <div className="mt-3 text-3xl font-black text-slate-900">
-            {summary?.total ?? 0}
-          </div>
-        </div>
-        <div className={statCardClass}>
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Completed
-          </div>
-          <div className="mt-3 text-3xl font-black text-emerald-600">
-            {summary?.completed ?? 0}
-          </div>
-        </div>
-        <div className={statCardClass}>
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            In progress
-          </div>
-          <div className="mt-3 text-3xl font-black text-amber-600">
-            {summary?.inProgress ?? 0}
-          </div>
-        </div>
-        <div className={statCardClass}>
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Evidence items
-          </div>
-          <div className="mt-3 text-3xl font-black text-blue-600">
-            {summary?.evidenceCount ?? 0}
-          </div>
-        </div>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <StatCard label="Total Obligations" value={summary?.total ?? 0}
+          sub="across all categories" icon={FiDatabase} tone="blue" />
+        <StatCard label="Completed" value={summary?.completed ?? 0}
+          sub={`${requirements.length ? Math.round((summary?.completed / summary?.total) * 100) : 0}% complete`}
+          icon={FiCheckCircle} tone="emerald" />
+        <StatCard label="In Progress" value={summary?.inProgress ?? 0}
+          sub={summary?.overdueCount ? `${summary.overdueCount} overdue` : "On track"}
+          icon={FiClock} tone={summary?.overdueCount > 0 ? "red" : "amber"} />
+        <StatCard label="Evidence Files" value={summary?.evidenceCount ?? 0}
+          sub="uploaded across obligations" icon={FiUploadCloud} tone="blue" />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <form
-            onSubmit={handleSubmit}
-            className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4"
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-black text-slate-900">
-                  {activeRequirementId ? "Edit obligation" : "Add obligation"}
-                </h2>
-                <p className="text-sm text-slate-500">
-                  Capture a new reporting obligation, evidence requirement, and
-                  due date.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="text-sm font-semibold text-slate-500"
-              >
-                Clear
+      {/* Tabs */}
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="border-b border-slate-200 bg-slate-50 flex overflow-x-auto">
+          {TABS.map((t) => (
+            <Tab key={t} label={t} active={activeTab === t} onClick={() => setActiveTab(t)}
+              count={t === "Approvals" ? pendingApprovals.length : t === "Obligations" ? requirements.length : undefined} />
+          ))}
+          <div className="ml-auto flex items-center px-4">
+            {activeTab === "Obligations" && !showForm && (
+              <button onClick={() => { setShowForm(true); setEditId(null); setForm(EMPTY_FORM); }}
+                className="flex items-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-xs font-bold text-white hover:bg-blue-800 transition-colors">
+                <FiPlus size={13} /> New Obligation
               </button>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <input
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                placeholder="Obligation title"
-                value={form.title}
-                onChange={(event) =>
-                  setForm({ ...form, title: event.target.value })
-                }
-                required
-              />
-              <input
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                placeholder="Source"
-                value={form.source}
-                onChange={(event) =>
-                  setForm({ ...form, source: event.target.value })
-                }
-              />
-              <select
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                value={form.category}
-                onChange={(event) =>
-                  setForm({ ...form, category: event.target.value })
-                }
-              >
-                <option value="Reporting">Reporting</option>
-                <option value="Legislation">Legislation</option>
-                <option value="Policy">Policy</option>
-                <option value="Accounting standard">Accounting standard</option>
-                <option value="Compliance">Compliance</option>
-                <option value="Other">Other</option>
-              </select>
-              <input
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                placeholder="Owner"
-                value={form.owner}
-                onChange={(event) =>
-                  setForm({ ...form, owner: event.target.value })
-                }
-              />
-              <input
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                type="date"
-                value={form.dueDate}
-                onChange={(event) =>
-                  setForm({ ...form, dueDate: event.target.value })
-                }
-              />
-              <select
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                value={form.status}
-                onChange={(event) =>
-                  setForm({ ...form, status: event.target.value })
-                }
-              >
-                <option value="planned">Planned</option>
-                <option value="in_progress">In progress</option>
-                <option value="completed">Completed</option>
-                <option value="blocked">Blocked</option>
-              </select>
-              <select
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                value={form.materiality}
-                onChange={(event) =>
-                  setForm({ ...form, materiality: event.target.value })
-                }
-              >
-                <option value="Standard">Standard</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
-              </select>
-              <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={form.approvalRequired}
-                  onChange={(event) =>
-                    setForm({ ...form, approvalRequired: event.target.checked })
-                  }
-                />
-                Approval required
-              </label>
-            </div>
-            <textarea
-              className="mt-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-              rows="3"
-              placeholder="Details"
-              value={form.details}
-              onChange={(event) =>
-                setForm({ ...form, details: event.target.value })
-              }
-            />
-            <div className="mt-3">
-              <div className="text-sm font-semibold text-slate-700">
-                Evidence requirements
-              </div>
-              {form.evidenceRequired.map((item, index) => (
-                <div key={`${item}-${index}`} className="mt-2 flex gap-2">
-                  <input
-                    className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                    placeholder="Evidence item"
-                    value={item}
-                    onChange={(event) => {
-                      const next = [...form.evidenceRequired];
-                      next[index] = event.target.value;
-                      setForm({ ...form, evidenceRequired: next });
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                    onClick={() => {
-                      const next = form.evidenceRequired.filter(
-                        (_, currentIndex) => currentIndex !== index,
-                      );
-                      setForm({
-                        ...form,
-                        evidenceRequired: next.length ? next : [""],
-                      });
-                    }}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                className="mt-2 flex items-center gap-2 text-sm font-semibold text-blue-700"
-                onClick={() =>
-                  setForm({
-                    ...form,
-                    evidenceRequired: [...form.evidenceRequired, ""],
-                  })
-                }
-              >
-                <FiPlus /> Add evidence
-              </button>
-            </div>
-
-            <div className="mt-3">
-              <div className="text-sm font-semibold text-slate-700">
-                Attach evidence files
-              </div>
-              <label className="mt-2 flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-blue-300 bg-blue-50 px-3 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-100">
-                <FiUploadCloud /> Select files to upload
-                <input
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={(event) => {
-                    if (event.target.files) {
-                      setPendingFiles([
-                        ...pendingFiles,
-                        ...Array.from(event.target.files),
-                      ]);
-                    }
-                  }}
-                />
-              </label>
-              {pendingFiles.length > 0 && (
-                <div className="mt-2 space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
-                  <div className="text-xs font-semibold text-slate-600">
-                    {pendingFiles.length} file(s) to upload
-                  </div>
-                  {pendingFiles.map((file, index) => (
-                    <div
-                      key={`${file.name}-${index}`}
-                      className="flex items-center justify-between rounded bg-white px-2 py-1 text-xs"
-                    >
-                      <span className="truncate text-slate-700">
-                        {file.name}
-                      </span>
-                      <button
-                        type="button"
-                        className="text-red-600 hover:text-red-800"
-                        onClick={() =>
-                          setPendingFiles(
-                            pendingFiles.filter((_, i) => i !== index),
-                          )
-                        }
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="mt-4 flex items-center gap-3">
-              <button
-                type="submit"
-                className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white"
-                disabled={saving}
-              >
-                {saving
-                  ? "Saving..."
-                  : activeRequirementId
-                    ? "Update obligation"
-                    : "Create obligation"}
-              </button>
-              <button
-                type="button"
-                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-                onClick={resetForm}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-          <div className="mb-5 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-black text-slate-900">
-                Obligation register
-              </h2>
-              <p className="text-sm text-slate-500">
-                Each item includes source, owner, approval status and evidence
-                requirements.
-              </p>
-            </div>
-            <div className="rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
-              {requirements.length} items
-            </div>
+            )}
           </div>
+        </div>
 
-          <div className="space-y-3">
-            {requirements.map((item) => (
-              <div
-                key={item._id || item.title}
-                className="rounded-2xl border border-slate-200 p-4"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-slate-900">
-                        {item.title}
-                      </h3>
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
-                        {item.category}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {item.details}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-                      {item.status === "completed" ? (
-                        <FiCheckCircle className="text-emerald-600" />
-                      ) : item.status === "blocked" ? (
-                        <FiAlertCircle className="text-red-600" />
-                      ) : (
-                        <FiClock className="text-amber-600" />
-                      )}
-                      {item.status}
-                    </div>
-                    <button
-                      type="button"
-                      className="rounded-full border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600"
-                      onClick={() => startEdit(item)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-full border border-red-200 px-2.5 py-1 text-xs font-semibold text-red-600"
-                      onClick={() => handleDelete(item._id || item.id)}
-                    >
-                      <FiTrash2 className="inline" /> Delete
-                    </button>
-                  </div>
-                </div>
+        <div className="p-5 sm:p-6">
 
-                <div className="mt-4 grid gap-3 md:grid-cols-3">
-                  <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                      Source
-                    </div>
-                    <div className="mt-1 text-sm text-slate-700">
-                      {item.source}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                      Owner
-                    </div>
-                    <div className="mt-1 text-sm text-slate-700">
-                      {item.owner}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                      Due
-                    </div>
-                    <div className="mt-1 text-sm text-slate-700">
-                      {item.dueDate
-                        ? new Date(item.dueDate).toLocaleDateString()
-                        : "Not set"}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {item.evidenceRequired?.map((evidence) => (
-                    <span
-                      key={evidence}
-                      className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-600"
-                    >
-                      {evidence}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="mt-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <div className="text-sm font-semibold text-slate-700">
-                      Uploaded evidence files
-                    </div>
-                    <label className="cursor-pointer rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100">
-                      <FiUploadCloud className="mb-1 inline" /> Upload file
-                      <input
-                        type="file"
-                        className="hidden"
-                        onChange={(event) =>
-                          handleFileUpload(
-                            item._id || item.id,
-                            event.target.files?.[0],
-                          )
-                        }
-                        disabled={uploadingFileId === (item._id || item.id)}
-                      />
-                    </label>
-                  </div>
-                  {item.evidenceFiles && item.evidenceFiles.length > 0 ? (
-                    <div className="space-y-2">
-                      {item.evidenceFiles.map((file) => (
-                        <div
-                          key={file._id}
-                          className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
-                        >
-                          <div className="flex-1">
-                            <div className="font-semibold text-slate-700">
-                              {file.fileName}
-                            </div>
-                            <div className="text-xs text-slate-500">
-                              {(file.fileSize / 1024).toFixed(2)} KB ·{" "}
-                              {new Date(file.uploadedAt).toLocaleDateString()}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              className="rounded px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50"
-                              onClick={() =>
-                                handleDownloadFile(
-                                  item._id || item.id,
-                                  file._id,
-                                  file.fileName,
-                                )
-                              }
-                            >
-                              Download
-                            </button>
-                            <button
-                              type="button"
-                              className="rounded px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
-                              onClick={() =>
-                                handleDeleteFile(item._id || item.id, file._id)
-                              }
-                            >
-                              Delete
-                            </button>
-                          </div>
+          {/* ── Dashboard Tab ─────────────────────────────────────────────── */}
+          {activeTab === "Dashboard" && (
+            <div className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                {/* Progress by status */}
+                <div className="rounded-2xl border border-slate-200 p-5">
+                  <h3 className="text-sm font-black text-slate-900 mb-4">Obligation Progress</h3>
+                  <div className="space-y-4">
+                    {[
+                      { label: "Completed",   count: summary?.completed  || 0, color: "bg-emerald-500" },
+                      { label: "In Progress", count: summary?.inProgress || 0, color: "bg-amber-500"   },
+                      { label: "Blocked",     count: summary?.blocked    || 0, color: "bg-red-500"     },
+                      { label: "Planned",     count: (summary?.total || 0) - (summary?.completed || 0) - (summary?.inProgress || 0) - (summary?.blocked || 0), color: "bg-slate-300" },
+                    ].map(({ label, count, color }) => (
+                      <div key={label}>
+                        <div className="flex items-center justify-between text-xs mb-1.5">
+                          <span className="font-semibold text-slate-600">{label}</span>
+                          <span className="font-black text-slate-900">{count} <span className="text-slate-400">({summary?.total ? Math.round((count / summary.total) * 100) : 0}%)</span></span>
                         </div>
-                      ))}
+                        <ProgressBar value={summary?.total ? (count / summary.total) * 100 : 0} color={color} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Next due / overdue */}
+                <div className="rounded-2xl border border-slate-200 p-5">
+                  <h3 className="text-sm font-black text-slate-900 mb-4">Upcoming Deadlines</h3>
+                  <div className="space-y-3">
+                    {requirements
+                      .filter((r) => r.dueDate && r.status !== "completed")
+                      .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+                      .slice(0, 5)
+                      .map((r) => {
+                        const overdue = new Date(r.dueDate) < new Date();
+                        return (
+                          <div key={r._id} className="flex items-center justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold text-slate-800 truncate">{r.title}</p>
+                              <p className="text-[11px] text-slate-400">{r.owner || "Unassigned"}</p>
+                            </div>
+                            <span className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full ${overdue ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"}`}>
+                              {new Date(r.dueDate).toLocaleDateString("en-AU", { day:"2-digit", month:"short" })}
+                            </span>
+                          </div>
+                        );
+                      })
+                    }
+                    {requirements.filter((r) => r.dueDate && r.status !== "completed").length === 0 && (
+                      <p className="text-sm text-slate-400 italic">No upcoming deadlines.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent obligations */}
+              <div>
+                <h3 className="text-sm font-black text-slate-900 mb-3">Recent Obligations</h3>
+                <div className="space-y-2">
+                  {requirements.slice(0, 3).map((r) => (
+                    <div key={r._id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <StatusBadge status={r.status} />
+                        <p className="text-sm font-semibold text-slate-800 truncate">{r.title}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <MatBadge value={r.materiality} />
+                        <button onClick={() => { setActiveTab("Obligations"); handleEdit(r); }}
+                          className="text-xs font-bold text-blue-700 hover:underline">Edit</button>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="text-xs text-slate-500">
-                      No files uploaded yet
-                    </div>
+                  ))}
+                  {requirements.length === 0 && (
+                    <p className="text-sm text-slate-400 italic text-center py-6">No obligations yet. Create your first one in the Obligations tab.</p>
                   )}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+          )}
 
-        <div className="space-y-4">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <FiUploadCloud /> Evidence readiness
-            </div>
-            <div className="mt-4 text-4xl font-black text-slate-900">
-              {summary?.evidenceCount ?? 0}
-            </div>
-            <p className="mt-2 text-sm text-slate-500">
-              Evidence items currently mapped to obligations.
-            </p>
-          </div>
+          {/* ── Obligations Tab ───────────────────────────────────────────── */}
+          {activeTab === "Obligations" && (
+            <div className="space-y-5">
+              {showForm && (
+                <ObligationForm form={form} setForm={setForm} onSubmit={handleSubmit}
+                  saving={saving} onCancel={resetForm} editId={editId}
+                  pendingFiles={pendingFiles} setPendingFiles={setPendingFiles} />
+              )}
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <FiDatabase /> Recommended next action
+              {/* Filter bar */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
+                  {["all", "planned", "in_progress", "completed", "blocked"].map((s) => (
+                    <button key={s} onClick={() => setFilterStatus(s)}
+                      className={`rounded-md px-3 py-1.5 text-xs font-bold transition-colors ${
+                        filterStatus === s ? "bg-blue-700 text-white" : "text-slate-500 hover:text-slate-900"
+                      }`}>
+                      {s === "all" ? "All" : s.replace("_", " ")}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs font-semibold text-slate-500">{filtered.length} obligation{filtered.length !== 1 ? "s" : ""}</p>
+              </div>
+
+              <div className="space-y-4">
+                {filtered.map((item) => (
+                  <ObligationCard key={item._id} item={item}
+                    onEdit={handleEdit} onDelete={handleDelete}
+                    onUpload={handleUpload} onDeleteFile={handleDeleteFile}
+                    onDownload={handleDownload} uploading={uploadingId}
+                    onApproveStep={handleApproveStep}
+                    onAddComment={handleAddComment}
+                    onDeleteComment={handleDeleteComment} />
+                ))}
+                {filtered.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-16 text-center text-slate-400">
+                    <FiShield size={32} className="mb-3 opacity-30" />
+                    <p className="text-sm font-semibold">No obligations{filterStatus !== "all" ? ` with status "${filterStatus}"` : ""}</p>
+                    {!showForm && (
+                      <button onClick={() => setShowForm(true)}
+                        className="mt-4 flex items-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-sm font-bold text-white hover:bg-blue-800">
+                        <FiPlus size={14} /> Create First Obligation
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-            <p className="mt-4 text-sm text-slate-600">
-              Keep a single evidence register per obligation and attach each
-              item to the appropriate report template before sign-off.
-            </p>
-          </div>
+          )}
+
+          {/* ── Approvals Tab ─────────────────────────────────────────────── */}
+          {activeTab === "Approvals" && (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-center gap-3">
+                <FiAlertTriangle size={16} className="text-amber-600 shrink-0" />
+                <p className="text-sm font-semibold text-amber-800">
+                  {pendingApprovals.length > 0
+                    ? `${pendingApprovals.length} obligation${pendingApprovals.length > 1 ? "s require" : " requires"} approval.`
+                    : "No pending approvals. All obligations are either approved or do not require approval."}
+                </p>
+              </div>
+              {pendingApprovals.map((item) => (
+                <div key={item._id} className="rounded-2xl border border-slate-200 bg-white p-5">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div>
+                      <h3 className="text-sm font-black text-slate-900">{item.title}</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">{item.source || "—"} · Owner: {item.owner || "—"}</p>
+                    </div>
+                    <ApprovalBadge status={item.approvalStatus || "pending"} />
+                  </div>
+                  {item.details && <p className="text-sm text-slate-600 mb-3">{item.details}</p>}
+                  <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
+                    <p className="text-xs text-slate-400 flex-1">Awaiting sign-off before report finalisation.</p>
+                    <button onClick={() => handleEdit(item)}
+                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50">
+                      Review & Edit
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Report Pack Tab ───────────────────────────────────────────── */}
+          {activeTab === "Report Pack" && (
+            <div className="space-y-5">
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
+                <div className="flex items-start gap-3">
+                  <FiShield size={20} className="text-blue-700 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-black text-blue-900">Compliance Score: {summary?.complianceScore ?? 0}%</p>
+                    <p className="text-xs text-blue-700 mt-1">
+                      {(summary?.complianceScore ?? 0) >= 80
+                        ? "Strong compliance posture. Ensure all evidence is uploaded before sign-off."
+                        : (summary?.complianceScore ?? 0) >= 50
+                        ? "Moderate compliance. Review in-progress and blocked obligations."
+                        : "Compliance needs attention. Prioritise blocked and overdue obligations."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      {["Obligation", "Source", "Owner", "Due Date", "Status", "Materiality", "Evidence Files"].map((h) => (
+                        <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {requirements.length === 0 ? (
+                      <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-slate-400">No obligations defined yet.</td></tr>
+                    ) : requirements.map((r) => (
+                      <tr key={r._id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-4 py-3 max-w-[200px]">
+                          <p className="text-sm font-black text-slate-900 truncate">{r.title}</p>
+                          {r.legislationRef && <p className="text-[11px] font-mono text-slate-400 truncate">{r.legislationRef}</p>}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-slate-600 max-w-[150px] truncate">{r.source || "—"}</td>
+                        <td className="px-4 py-3 text-xs text-slate-600">{r.owner || "—"}</td>
+                        <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">
+                          {r.dueDate ? new Date(r.dueDate).toLocaleDateString("en-AU", { day:"2-digit", month:"short", year:"numeric" }) : "—"}
+                        </td>
+                        <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
+                        <td className="px-4 py-3"><MatBadge value={r.materiality} /></td>
+                        <td className="px-4 py-3 text-xs font-black text-slate-900">{r.evidenceFiles?.length || 0}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <p className="text-xs font-black uppercase tracking-wider text-slate-500 mb-1">Recommended Next Step</p>
+                <p className="text-sm text-slate-700">
+                  Maintain a single evidence register per obligation and attach each item to the appropriate report template before final sign-off.
+                </p>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
     </div>

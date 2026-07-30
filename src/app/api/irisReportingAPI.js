@@ -1,164 +1,102 @@
 import api from "./axios";
 
+// ── Helper: wrap every call in a normalised { success, data?, error? } shape ──
+async function call(fn) {
+  try {
+    const response = await fn();
+    return { success: true, data: response.data };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || "Request failed",
+      status: error.response?.status,
+    };
+  }
+}
+
 export const irisReportingAPI = {
-  getOverview: async () => {
-    try {
-      const response = await api.get("/iris-reporting/overview");
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error.response?.data?.message ||
-          error.message ||
-          "Failed to load IRIS overview",
-      };
-    }
-  },
+  // ── Overview & Report Pack ───────────────────────────────────────────────
+  getOverview:   () => call(() => api.get("/iris-reporting/overview")),
+  getReportPack: () => call(() => api.get("/iris-reporting/report-pack")),
 
-  getReportPack: async () => {
-    try {
-      const response = await api.get("/iris-reporting/report-pack");
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error.response?.data?.message ||
-          error.message ||
-          "Failed to load report pack",
-      };
-    }
-  },
-
+  // ── Obligation CRUD ──────────────────────────────────────────────────────
   createRequirement: async (payload) => {
-    try {
-      const response = await api.post("/iris-reporting/requirements", payload);
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error.response?.data?.message ||
-          error.message ||
-          "Failed to create requirement",
-      };
-    }
+    const res = await call(() => api.post("/iris-reporting/requirements", payload));
+    if (res.success) res.requirementId = res.data?.requirement?._id || null;
+    return res;
   },
 
   updateRequirement: async (requirementId, payload) => {
-    try {
-      const response = await api.patch(
-        `/iris-reporting/requirements/${requirementId}`,
-        payload,
-      );
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error.response?.data?.message ||
-          error.message ||
-          "Failed to update requirement",
-      };
-    }
+    const res = await call(() =>
+      api.patch(`/iris-reporting/requirements/${requirementId}`, payload)
+    );
+    if (res.success) res.requirementId = res.data?.requirement?._id || requirementId;
+    return res;
   },
 
-  deleteRequirement: async (requirementId) => {
-    try {
-      const response = await api.delete(
-        `/iris-reporting/requirements/${requirementId}`,
-      );
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error.response?.data?.message ||
-          error.message ||
-          "Failed to delete requirement",
-      };
-    }
-  },
+  deleteRequirement: (requirementId) =>
+    call(() => api.delete(`/iris-reporting/requirements/${requirementId}`)),
 
+  // ── Approval workflow ────────────────────────────────────────────────────
+  /**
+   * @param {string} requirementId
+   * @param {string} stepId
+   * @param {"approved"|"rejected"} decision
+   * @param {string} notes
+   */
+  decideApprovalStep: (requirementId, stepId, decision, notes = "") =>
+    call(() =>
+      api.patch(
+        `/iris-reporting/requirements/${requirementId}/steps/${stepId}/decision`,
+        { decision, notes }
+      )
+    ),
+
+  // ── Comments ─────────────────────────────────────────────────────────────
+  addComment: (requirementId, text) =>
+    call(() =>
+      api.post(`/iris-reporting/requirements/${requirementId}/comments`, { text })
+    ),
+
+  deleteComment: (requirementId, commentId) =>
+    call(() =>
+      api.delete(`/iris-reporting/requirements/${requirementId}/comments/${commentId}`)
+    ),
+
+  // ── Evidence Files ────────────────────────────────────────────────────────
   uploadEvidenceFile: async (requirementId, file) => {
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await api.post(
-        `/iris-reporting/requirements/${requirementId}/files`,
-        formData,
-      );
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error.response?.data?.message ||
-          error.message ||
-          "Failed to upload evidence file",
-      };
-    }
+    // Read the file into an ArrayBuffer first — this detaches it from the
+    // input element so resetting the input cannot cancel the in-flight request.
+    const arrayBuffer = await file.arrayBuffer();
+    const blob        = new Blob([arrayBuffer], { type: file.type });
+    const safeFile    = new File([blob], file.name, { type: file.type });
+
+    const formData = new FormData();
+    formData.append("file", safeFile);
+
+    return call(() =>
+      api.post(`/iris-reporting/requirements/${requirementId}/files`, formData, {
+        // Let the browser/axios set Content-Type with the correct multipart boundary.
+        // Setting it to undefined (not deleting) ensures axios handles it correctly.
+        headers: { "Content-Type": undefined },
+      })
+    );
   },
 
-  downloadEvidenceFile: async (requirementId, fileId, fileName) => {
-    try {
-      const response = await api.get(
-        `/iris-reporting/requirements/${requirementId}/files/${fileId}`,
-      );
-      if (!response.data || !response.data.file || !response.data.file.url) {
-        return { success: false, error: "Missing file URL" };
-      }
-      const url = response.data.file.url;
-      // Open Cloudinary URL in a new tab (user can download/view)
-      window.open(url, "_blank");
-      return { success: true };
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error.response?.data?.message ||
-          error.message ||
-          "Failed to download evidence file",
-      };
+  downloadEvidenceFile: async (requirementId, fileId) => {
+    const res = await call(() =>
+      api.get(`/iris-reporting/requirements/${requirementId}/files/${fileId}`)
+    );
+    if (res.success) {
+      const url = res.data?.file?.url;
+      if (url) window.open(url, "_blank");
+      else return { success: false, error: "File URL not found" };
     }
+    return res;
   },
 
-  deleteEvidenceFile: async (requirementId, fileId) => {
-    try {
-      const response = await api.delete(
-        `/iris-reporting/requirements/${requirementId}/files/${fileId}`,
-      );
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error.response?.data?.message ||
-          error.message ||
-          "Failed to delete evidence file",
-      };
-    }
-  },
+  deleteEvidenceFile: (requirementId, fileId) =>
+    call(() =>
+      api.delete(`/iris-reporting/requirements/${requirementId}/files/${fileId}`)
+    ),
 };

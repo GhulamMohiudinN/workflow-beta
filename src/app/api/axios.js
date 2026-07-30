@@ -27,11 +27,10 @@ api.interceptors.request.use(
 
     // Allow browser/axios to set multipart boundaries for file uploads
     if (config.data instanceof FormData) {
-      config.headers = {
-        ...config.headers,
-      };
-      delete config.headers["Content-Type"];
-      delete config.headers["content-type"];
+      // Set to undefined — do NOT delete — so axios sets the correct
+      // multipart/form-data boundary string automatically.
+      config.headers["Content-Type"]  = undefined;
+      config.headers["content-type"]  = undefined;
     } else {
       config.headers = {
         "Content-Type": "application/json",
