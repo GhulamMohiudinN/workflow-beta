@@ -49,6 +49,45 @@ const handleStyle = {
   borderRadius: "50%",
 };
 
+function getEvidencePreview(description, maxWords = 4) {
+  const text = typeof description === "string" ? description.trim().replace(/\s+/g, " ") : "";
+  if (!text) return "";
+
+  const words = text.split(" ");
+  if (words.length <= maxWords) return text;
+  return `${words.slice(0, maxWords).join(" ")}...`;
+}
+
+function EvidencePreview({ description }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const text = typeof description === "string" ? description.trim().replace(/\s+/g, " ") : "";
+  if (!text) return null;
+
+  const preview = getEvidencePreview(text);
+  const isTruncated = text.length > preview.length;
+
+  return (
+    <div className="mt-2">
+      <p className="text-[11px] text-slate-600 leading-snug">
+        <span className="font-semibold text-slate-500">Evidence:</span>{" "}
+        {isExpanded ? text : preview}
+      </p>
+      {isTruncated && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsExpanded((prev) => !prev);
+          }}
+          className="mt-1 text-[10px] font-semibold text-blue-600 hover:text-blue-700"
+        >
+          {isExpanded ? "Read less" : "Read more"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── Custom Trigger Node ────────────────────────────────────────────────────
 function TriggerNode({ data, selected }) {
   const cfg = NODE_TYPES_CONFIG.trigger;
@@ -71,7 +110,7 @@ function TriggerNode({ data, selected }) {
         <FiZap size={13} style={{ color: cfg.color }} />
       </div>
       <p className="font-bold text-slate-800 text-sm leading-snug mb-1 truncate">{data.title || "Untitled"}</p>
-      <p className="text-[11px] text-slate-500 truncate">Source: {data.assigneeName || "WorkflowPro"}</p>
+      <EvidencePreview description={data.description} />
       {data.estimateTime && (
         <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-100">
           <FiClock size={11} className="text-slate-400" />
@@ -105,7 +144,7 @@ function ActionNode({ data, selected }) {
         <FiZap size={13} style={{ color: cfg.color }} />
       </div>
       <p className="font-bold text-slate-800 text-sm leading-snug mb-1 truncate">{data.title || "Untitled"}</p>
-      <p className="text-[11px] text-slate-500 truncate">Source: {data.assigneeName || "WorkflowPro"}</p>
+      <EvidencePreview description={data.description} />
       {data.estimateTime && (
         <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-100">
           <FiClock size={11} className="text-slate-400" />
@@ -139,7 +178,7 @@ function FunctionNode({ data, selected }) {
         <FiCode size={13} style={{ color: cfg.color }} />
       </div>
       <p className="font-bold text-slate-800 text-sm leading-snug mb-1 truncate">{data.title || "Untitled"}</p>
-      <p className="text-[11px] text-slate-500 truncate">Source: {data.assigneeName || "WorkflowPro"}</p>
+      <EvidencePreview description={data.description} />
       {data.estimateTime && (
         <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-100">
           <FiClock size={11} className="text-slate-400" />
@@ -181,6 +220,7 @@ function buildNodesAndEdges(steps) {
       data: {
         title: step.title || "Untitled Step",
         assigneeName,
+        description: step.description || "",
         estimateTime: step.estimateTime || step.timeEstimate || "",
         sequenceNo: step.sequenceNo || idx + 1,
         nodeType,

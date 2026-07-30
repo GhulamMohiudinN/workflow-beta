@@ -948,7 +948,7 @@ export default function ProcessDetailPage() {
           </div>
 
           {/* Cycle Costs */}
-          <div className="bg-white/90 rounded-xl border border-cyan-100 shadow-sm overflow-hidden">
+          {/* <div className="bg-white/90 rounded-xl border border-cyan-100 shadow-sm overflow-hidden">
             <button
               onClick={() => toggleSection("costs")}
               className="w-full px-5 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
@@ -983,10 +983,10 @@ export default function ProcessDetailPage() {
                 </div>
               </div>
             )}
-          </div>
+          </div> */}
 
           {/* Systems & Tags */}
-          <div className="bg-white/90 rounded-xl border border-cyan-100 shadow-sm overflow-hidden">
+          {/* <div className="bg-white/90 rounded-xl border border-cyan-100 shadow-sm overflow-hidden">
             <button
               onClick={() => toggleSection("systems")}
               className="w-full px-5 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
@@ -1027,7 +1027,7 @@ export default function ProcessDetailPage() {
                 </div>
               </div>
             )}
-          </div>
+          </div> */}
         </div>
       </div>
 
