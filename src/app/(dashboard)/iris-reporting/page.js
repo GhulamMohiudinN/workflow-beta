@@ -379,66 +379,99 @@ function ObligationCard({
   return (
     <div className={`rounded-2xl border shadow-sm overflow-hidden transition-all ${overdue ? "border-red-200 bg-red-50/30" : "border-slate-200 bg-white"}`}>
 
-      {/* ── Header row ──────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-start justify-between gap-3 p-5">
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2 mb-1.5">
-            <StatusBadge status={item.status} />
-            <MatBadge value={item.materiality} />
-            {item.approvalRequired && <ApprovalBadge status={item.approvalStatus || "pending"} />}
-            {overdue && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-[11px] font-bold text-red-700">
-                <FiAlertTriangle size={10} /> Overdue
-              </span>
+      {/* ── Clickable summary row — click anywhere to expand ─────────────── */}
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full text-left"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3 p-5">
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-1.5">
+              <StatusBadge status={item.status} />
+              <MatBadge value={item.materiality} />
+              {item.approvalRequired && <ApprovalBadge status={item.approvalStatus || "pending"} />}
+              {overdue && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-[11px] font-bold text-red-700">
+                  <FiAlertTriangle size={10} /> Overdue
+                </span>
+              )}
+              {(item.evidenceFiles?.length > 0) && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-600">
+                  <FiFileText size={10} /> {item.evidenceFiles.length} file{item.evidenceFiles.length > 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
+            <h3 className="text-sm font-black text-slate-900 leading-snug">{item.title}</h3>
+            {item.legislationRef && (
+              <p className="text-xs font-mono text-blue-500 mt-0.5">{item.legislationRef}</p>
+            )}
+            {!expanded && item.details && (
+              <p className="text-xs text-slate-400 mt-1 truncate">{item.details}</p>
             )}
           </div>
-          <h3 className="text-sm font-black text-slate-900 leading-snug">{item.title}</h3>
-          {item.legislationRef && (
-            <p className="text-xs font-mono text-slate-400 mt-0.5">{item.legislationRef}</p>
-          )}
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button onClick={() => setExpanded((v) => !v)}
-            className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50 transition-colors"
-            title={expanded ? "Collapse" : "Expand"}>
-            {expanded ? <FiChevronUp size={14} /> : <FiChevronDown size={14} />}
-          </button>
-          <button onClick={() => onEdit(item)}
-            className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50 transition-colors" title="Edit">
-            <FiEdit2 size={14} />
-          </button>
-          <button onClick={() => onDelete(item._id)}
-            className="rounded-lg border border-red-200 p-2 text-red-500 hover:bg-red-50 transition-colors" title="Delete">
-            <FiTrash2 size={14} />
-          </button>
-        </div>
-      </div>
-
-      {/* ── Meta row ────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-5 pb-4 border-t border-slate-100 pt-3">
-        {[
-          { label: "Source",   value: item.source || "—"           },
-          { label: "Owner",    value: item.owner  || "—"           },
-          { label: "Due Date", value: item.dueDate
-              ? new Date(item.dueDate).toLocaleDateString("en-AU", { day:"2-digit", month:"short", year:"numeric" })
-              : "Not set", red: overdue },
-          { label: "Period",   value: item.reportingPeriod || "—"  },
-        ].map(({ label, value, red }) => (
-          <div key={label}>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
-            <p className={`text-xs font-semibold mt-0.5 truncate ${red ? "text-red-600" : "text-slate-700"}`}>{value}</p>
+          {/* Right: expand indicator + action buttons */}
+          <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+            <span className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-colors ${
+              expanded ? "border-blue-200 bg-blue-50 text-blue-700" : "border-slate-200 bg-slate-50 text-slate-500 hover:border-blue-200 hover:text-blue-600"
+            }`}
+              onClick={() => setExpanded((v) => !v)}>
+              {expanded ? <><FiChevronUp size={13} /> Collapse</> : <><FiChevronDown size={13} /> View All</>}
+            </span>
+            <button onClick={() => onEdit(item)}
+              className="rounded-lg border border-slate-200 bg-white p-2 text-slate-500 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 transition-colors" title="Edit obligation">
+              <FiEdit2 size={14} />
+            </button>
+            <button onClick={() => onDelete(item._id)}
+              className="rounded-lg border border-red-100 bg-white p-2 text-red-400 hover:border-red-300 hover:bg-red-50 hover:text-red-600 transition-colors" title="Delete obligation">
+              <FiTrash2 size={14} />
+            </button>
           </div>
-        ))}
-      </div>
+        </div>
+
+        {/* ── Always-visible summary meta strip ─────────────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-5 pb-4 border-t border-slate-100 pt-3">
+          {[
+            { label: "Source",   value: item.source || "—" },
+            { label: "Owner",    value: item.owner  || "—" },
+            { label: "Due Date", value: item.dueDate
+                ? new Date(item.dueDate).toLocaleDateString("en-AU", { day:"2-digit", month:"short", year:"numeric" })
+                : "Not set", red: overdue },
+            { label: "Period",   value: item.reportingPeriod || "—" },
+          ].map(({ label, value, red }) => (
+            <div key={label}>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+              <p className={`text-xs font-semibold mt-0.5 truncate ${red ? "text-red-600" : "text-slate-700"}`}>{value}</p>
+            </div>
+          ))}
+        </div>
+      </button>
 
       {/* ── Expanded body ────────────────────────────────────────────────── */}
       {expanded && (
         <div className="border-t border-slate-100">
 
+          {/* Full field grid — ALL obligation fields visible when expanded */}
+          <div className="px-5 pt-4 pb-3 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
+            {[
+              { label: "Category",          value: item.category || "—"           },
+              { label: "Obligation Type",   value: (item.obligationType || "—").replace(/_/g, " ") },
+              { label: "Report Type",       value: item.reportType || "—"         },
+              { label: "Legislation Ver.",  value: item.legislationVersion || "—" },
+              { label: "Rule Version",      value: item.ruleVersion || "—"        },
+              { label: "Approval Required", value: item.approvalRequired ? "Yes" : "No" },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+                <p className="text-xs font-semibold text-slate-700 mt-0.5 capitalize">{value}</p>
+              </div>
+            ))}
+          </div>
+
           {/* Details */}
           {item.details && (
-            <div className="px-5 pt-4 pb-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Details</p>
+            <div className="px-5 pb-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Details / Context</p>
               <p className="text-sm text-slate-600 leading-relaxed">{item.details}</p>
             </div>
           )}
@@ -728,7 +761,8 @@ export default function IrisReportingPage() {
     });
     setShowForm(true);
     setActiveTab("Obligations");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    // Scroll to bottom so the edit form is visible (form is now at the bottom of the list)
+    setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 100);
   };
 
   const handleDelete = async (id) => {
@@ -854,8 +888,11 @@ export default function IrisReportingPage() {
               count={t === "Approvals" ? pendingApprovals.length : t === "Obligations" ? requirements.length : undefined} />
           ))}
           <div className="ml-auto flex items-center px-4">
-            {activeTab === "Obligations" && !showForm && (
-              <button onClick={() => { setShowForm(true); setEditId(null); setForm(EMPTY_FORM); }}
+            {activeTab === "Obligations" && (
+              <button
+                onClick={() => { setEditId(null); setForm(EMPTY_FORM); setPendingFiles([]); setShowForm(true);
+                  setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 100);
+                }}
                 className="flex items-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-xs font-bold text-white hover:bg-blue-800 transition-colors">
                 <FiPlus size={13} /> New Obligation
               </button>
@@ -948,12 +985,6 @@ export default function IrisReportingPage() {
           {/* ── Obligations Tab ───────────────────────────────────────────── */}
           {activeTab === "Obligations" && (
             <div className="space-y-5">
-              {showForm && (
-                <ObligationForm form={form} setForm={setForm} onSubmit={handleSubmit}
-                  saving={saving} onCancel={resetForm} editId={editId}
-                  pendingFiles={pendingFiles} setPendingFiles={setPendingFiles} />
-              )}
-
               {/* Filter bar */}
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
@@ -969,6 +1000,7 @@ export default function IrisReportingPage() {
                 <p className="text-xs font-semibold text-slate-500">{filtered.length} obligation{filtered.length !== 1 ? "s" : ""}</p>
               </div>
 
+              {/* Obligation cards */}
               <div className="space-y-4">
                 {filtered.map((item) => (
                   <ObligationCard key={item._id} item={item}
@@ -979,19 +1011,26 @@ export default function IrisReportingPage() {
                     onAddComment={handleAddComment}
                     onDeleteComment={handleDeleteComment} />
                 ))}
-                {filtered.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-16 text-center text-slate-400">
+                {filtered.length === 0 && !showForm && (
+                  <div className="flex flex-col items-center justify-center py-12 text-center text-slate-400">
                     <FiShield size={32} className="mb-3 opacity-30" />
-                    <p className="text-sm font-semibold">No obligations{filterStatus !== "all" ? ` with status "${filterStatus}"` : ""}</p>
-                    {!showForm && (
-                      <button onClick={() => setShowForm(true)}
-                        className="mt-4 flex items-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-sm font-bold text-white hover:bg-blue-800">
-                        <FiPlus size={14} /> Create First Obligation
-                      </button>
-                    )}
+                    <p className="text-sm font-semibold">No obligations{filterStatus !== "all" ? ` with status "${filterStatus.replace("_"," ")}"` : ""}</p>
                   </div>
                 )}
               </div>
+
+              {/* ── New / Edit obligation form — ALWAYS at the bottom ──────── */}
+              {showForm ? (
+                <ObligationForm form={form} setForm={setForm} onSubmit={handleSubmit}
+                  saving={saving} onCancel={resetForm} editId={editId}
+                  pendingFiles={pendingFiles} setPendingFiles={setPendingFiles} />
+              ) : (
+                <button
+                  onClick={() => { setEditId(null); setForm(EMPTY_FORM); setPendingFiles([]); setShowForm(true); }}
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 py-5 text-sm font-bold text-slate-500 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 transition-all">
+                  <FiPlus size={16} /> Add New Obligation
+                </button>
+              )}
             </div>
           )}
 
