@@ -37,7 +37,19 @@ export const irisReportingAPI = {
   deleteRequirement: (requirementId) =>
     call(() => api.delete(`/iris-reporting/requirements/${requirementId}`)),
 
-  // ── Approval workflow ────────────────────────────────────────────────────
+  // ── Legislation Library ────────────────────────────────────────────────────
+  getLegislationLibrary: () => call(() => api.get("/iris-reporting/legislation-library")),
+
+  // ── Dry-run validate ──────────────────────────────────────────────────────
+  validateRequirement: (payload, requirementId = null) =>
+    call(() =>
+      api.post(
+        requirementId
+          ? `/iris-reporting/requirements/${requirementId}/validate`
+          : "/iris-reporting/requirements/validate",
+        payload
+      )
+    ),
   /**
    * @param {string} requirementId
    * @param {string} stepId

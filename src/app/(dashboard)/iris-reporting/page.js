@@ -109,9 +109,43 @@ function Tab({ label, active, onClick, count }) {
 }
 
 // ─── Obligation Form ──────────────────────────────────────────────────────────
-function ObligationForm({ form, setForm, onSubmit, saving, onCancel, editId, pendingFiles, setPendingFiles }) {
+function ObligationForm({ form, setForm, onSubmit, saving, onCancel, editId, pendingFiles, setPendingFiles, legislationLibrary }) {
   const dropRef = useRef(null);
   const [dragging, setDragging] = useState(false);
+  const [legSearch, setLegSearch] = useState("");
+  const [showLegDropdown, setShowLegDropdown] = useState(false);
+  const legRef = useRef(null);
+
+  // Filter library by search term
+  const filteredLib = useMemo(() => {
+    if (!legSearch.trim()) return legislationLibrary;
+    const q = legSearch.toLowerCase();
+    return legislationLibrary.filter(
+      (l) => l.ref.toLowerCase().includes(q) || l.title.toLowerCase().includes(q) || l.source.toLowerCase().includes(q)
+    );
+  }, [legSearch, legislationLibrary]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => { if (legRef.current && !legRef.current.contains(e.target)) setShowLegDropdown(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const selectLegRef = (item) => {
+    setForm({
+      ...form,
+      legislationRef:   item.ref,
+      source:           item.source,
+      category:         item.category,
+      obligationType:   item.obligationType,
+      materiality:      item.defaultMateriality,
+      // Auto-require approval for Critical/High
+      approvalRequired: ["Critical", "High"].includes(item.defaultMateriality) ? true : form.approvalRequired,
+    });
+    setLegSearch(item.ref);
+    setShowLegDropdown(false);
+  };
 
   const addFiles = (fileList) => {
     const incoming = Array.from(fileList).filter((f) => f.size <= 10 * 1024 * 1024);
@@ -155,9 +189,32 @@ function ObligationForm({ form, setForm, onSubmit, saving, onCancel, editId, pen
         </div>
         <div>
           <label className="text-xs font-semibold text-slate-600 mb-1 block">Legislation Reference</label>
-          <input value={form.legislationRef} onChange={(e) => setForm({ ...form, legislationRef: e.target.value })}
-            placeholder="e.g. SD 4.2.1(a)"
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-blue-500 outline-none" />
+          {/* Searchable dropdown from the pre-loaded FMA / SD / AASB library */}
+          <div className="relative" ref={legRef}>
+            <input
+              value={legSearch || form.legislationRef}
+              onChange={(e) => { setLegSearch(e.target.value); setShowLegDropdown(true); setForm({ ...form, legislationRef: e.target.value }); }}
+              onFocus={() => setShowLegDropdown(true)}
+              placeholder="Search or type (e.g. SD 4.2.1, FMA s.51)"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+            />
+            {showLegDropdown && filteredLib.length > 0 && (
+              <div className="absolute z-[300] left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-52 overflow-y-auto">
+                {filteredLib.slice(0, 20).map((item) => (
+                  <button key={item.ref} type="button"
+                    onClick={() => selectLegRef(item)}
+                    className="w-full text-left px-3 py-2.5 hover:bg-blue-50 transition-colors border-b border-slate-50 last:border-0">
+                    <span className="text-xs font-black text-blue-700 block">{item.ref}</span>
+                    <span className="text-[11px] text-slate-600 truncate block">{item.title}</span>
+                    <span className="text-[10px] text-slate-400">{item.source}</span>
+                  </button>
+                ))}
+                {filteredLib.length === 0 && (
+                  <p className="px-3 py-3 text-xs text-slate-400 italic">No matches — type your own reference</p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
         <div>
           <label className="text-xs font-semibold text-slate-600 mb-1 block">Category</label>
@@ -690,6 +747,8 @@ export default function IrisReportingPage() {
   const [uploadingId,  setUploadingId]  = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
   const [pendingFiles, setPendingFiles] = useState([]);
+  const [legLibrary,   setLegLibrary]   = useState([]);
+  const [ruleWarnings, setRuleWarnings] = useState([]);
 
   const summary      = useMemo(() => data?.summary      || null, [data]);
   const requirements = useMemo(() => data?.requirements || [],   [data]);
@@ -707,27 +766,45 @@ export default function IrisReportingPage() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     setError(null);
-    const res = await irisReportingAPI.getOverview();
-    if (res.success) setData(res.data);
-    else setError(res.error || "Unable to load IRIS reporting data");
+
+    // Fetch overview and legislation library in parallel
+    const [overviewRes, libRes] = await Promise.all([
+      irisReportingAPI.getOverview(),
+      irisReportingAPI.getLegislationLibrary(),
+    ]);
+
+    if (overviewRes.success) setData(overviewRes.data);
+    else setError(overviewRes.error || "Unable to load IRIS reporting data");
+
+    if (libRes.success && Array.isArray(libRes.data?.library)) {
+      setLegLibrary(libRes.data.library);
+    }
+
     setLoading(false);
     setRefreshing(false);
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const resetForm = () => { setForm(EMPTY_FORM); setEditId(null); setShowForm(false); setPendingFiles([]); };
+  const resetForm = () => { setForm(EMPTY_FORM); setEditId(null); setShowForm(false); setPendingFiles([]); setRuleWarnings([]); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
+    setRuleWarnings([]);
     const payload = { ...form, evidenceRequired: form.evidenceRequired.filter(Boolean) };
+
+    // Dry-run validation to surface warnings before saving
+    const validation = await irisReportingAPI.validateRequirement(payload, editId || null);
+    if (validation.success && validation.warnings?.length) {
+      setRuleWarnings(validation.warnings);
+    }
+
     const res = editId
       ? await irisReportingAPI.updateRequirement(editId, payload)
       : await irisReportingAPI.createRequirement(payload);
 
     if (res.success) {
-      // Upload any pending files queued in the form
       const targetId = res.requirementId || editId;
       if (pendingFiles.length > 0 && targetId) {
         setUploadingId(targetId);
@@ -741,7 +818,9 @@ export default function IrisReportingPage() {
       await loadData(true);
       resetForm();
     } else {
+      // Business rule error from backend — show it clearly
       toast.error(res.error || "Failed to save");
+      setRuleWarnings((prev) => res.error ? [res.error, ...prev] : prev);
     }
     setSaving(false);
   };
@@ -1021,9 +1100,23 @@ export default function IrisReportingPage() {
 
               {/* ── New / Edit obligation form — ALWAYS at the bottom ──────── */}
               {showForm ? (
-                <ObligationForm form={form} setForm={setForm} onSubmit={handleSubmit}
-                  saving={saving} onCancel={resetForm} editId={editId}
-                  pendingFiles={pendingFiles} setPendingFiles={setPendingFiles} />
+                <>
+                  {/* Business rule warnings */}
+                  {ruleWarnings.length > 0 && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 space-y-1">
+                      {ruleWarnings.map((w, i) => (
+                        <div key={i} className="flex items-start gap-2 text-sm text-amber-800">
+                          <FiAlertTriangle size={14} className="shrink-0 mt-0.5 text-amber-600" />
+                          {w}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <ObligationForm form={form} setForm={setForm} onSubmit={handleSubmit}
+                    saving={saving} onCancel={resetForm} editId={editId}
+                    pendingFiles={pendingFiles} setPendingFiles={setPendingFiles}
+                    legislationLibrary={legLibrary} />
+                </>
               ) : (
                 <button
                   onClick={() => { setEditId(null); setForm(EMPTY_FORM); setPendingFiles([]); setShowForm(true); }}
