@@ -139,12 +139,12 @@ export default function SignupPage() {
               type="submit" disabled={loading}
               className="w-full flex justify-center items-center py-3 px-4 rounded-lg text-sm font-black text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
             >
-              {loading ? (<><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />Creating Account...</>) : "Create Workspace"}
+              {loading ? (<><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />Creating Account...</>) : "Create IRIS Workspace"}
             </button>
 
             <p className="text-center text-xs text-[var(--color-muted)] font-medium">
               Already have an account?{" "}
-              <Link href="/login" className="font-black text-[var(--color-primary)] hover:text-[var(--color-primary-hover)]">Sign in to your workspace</Link>
+              <Link href="/login" className="font-black text-[var(--color-primary)] hover:text-[var(--color-primary-hover)]">Sign in to your IRIS Workspace</Link>
             </p>
 
             <div className="relative">

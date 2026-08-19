@@ -119,7 +119,7 @@ export const Header = ({
                 <div className="border-b border-[var(--color-border)] px-4 py-3">
                   <p className="truncate text-sm font-bold">{displayName}</p>
                   <p className="truncate text-xs text-[var(--color-muted)]">
-                    {user?.email || user?.role || "Workspace user"}
+                    {user?.email || user?.role || "IRIS Workspace user"}
                   </p>
                 </div>
                 <button className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]">

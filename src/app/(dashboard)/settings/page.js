@@ -32,8 +32,8 @@ export default function SettingsPage() {
   const [isDeleting,      setIsDeleting]      = useState(false);
 
   const workspaceJson  = typeof window !== "undefined" ? localStorage.getItem("workspace") : null;
-  const workspace      = workspaceJson ? JSON.parse(workspaceJson) : { companyName: "Workspace" };
-  const workspaceName  = workspace.companyName || "Your Workspace";
+  const workspace      = workspaceJson ? JSON.parse(workspaceJson) : { companyName: "IRIS Workspace" };
+  const workspaceName  = workspace.companyName || "Your IRIS Workspace";
 
   // ── Handlers ────────────────────────────────────────────────────────────
 
@@ -57,11 +57,11 @@ export default function SettingsPage() {
   };
 
   const handleDeleteWorkspace = async () => {
-    if (confirmName !== workspaceName) { toast.error("Workspace name does not match"); return; }
+    if (confirmName !== workspaceName) { toast.error("IRIS Workspace name does not match"); return; }
     setIsDeleting(true);
     try {
       await workspaceAPI.deleteWorkspace();
-      toast.success("Workspace deleted successfully");
+      toast.success("IRIS Workspace deleted successfully");
       localStorage.clear();
       router.push("/login");
     } catch (error) {
@@ -76,8 +76,8 @@ export default function SettingsPage() {
 
       {/* ── Page Header ──────────────────────────────────────────────────── */}
       <div>
-        <h1 className="text-2xl font-black text-[var(--color-text)]">Security & Workspace</h1>
-        <p className="mt-1 text-sm font-medium text-[var(--color-muted)]">Manage your account protection and workspace lifecycle.</p>
+        <h1 className="text-2xl font-black text-[var(--color-text)]">Security & IRIS Workspace</h1>
+        <p className="mt-1 text-sm font-medium text-[var(--color-muted)]">Manage your account protection and IRIS Workspace lifecycle.</p>
       </div>
 
       <div className="space-y-6">
@@ -162,7 +162,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <h2 className="text-sm font-black text-[var(--color-text)]">Security Overview</h2>
-                <p className="text-xs font-medium text-[var(--color-muted)]">Your workspace security status</p>
+                <p className="text-xs font-medium text-[var(--color-muted)]">Your IRIS Workspace security status</p>
               </div>
             </div>
           </CardHeader>
@@ -195,14 +195,14 @@ export default function SettingsPage() {
             </div>
             <div>
               <h2 className="text-sm font-black text-red-900">Danger Zone</h2>
-              <p className="text-xs font-medium text-red-700/70">Irreversible actions that affect your entire workspace</p>
+              <p className="text-xs font-medium text-red-700/70">Irreversible actions that affect your entire IRIS Workspace</p>
             </div>
           </div>
           <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-5">
             <div>
-              <h3 className="text-sm font-black text-[var(--color-text)]">Delete this workspace</h3>
+              <h3 className="text-sm font-black text-[var(--color-text)]">Delete this IRIS Workspace</h3>
               <p className="text-xs font-medium text-[var(--color-muted)] max-w-md mt-1 leading-relaxed">
-                Once you delete a workspace, there is no going back. All data, users, and processes will be permanently removed.
+                Once you delete an IRIS Workspace, there is no going back. All data, users, and processes will be permanently removed.
               </p>
             </div>
             <Button
@@ -210,7 +210,7 @@ export default function SettingsPage() {
               icon={FiTrash2}
               onClick={() => setShowDeleteModal(true)}
             >
-              Delete Workspace
+              Delete IRIS Workspace
             </Button>
           </div>
         </div>
@@ -232,7 +232,7 @@ export default function SettingsPage() {
 
             <div className="p-6 space-y-5">
               <p className="text-sm font-medium text-[var(--color-muted)] text-center">
-                To confirm, type the workspace name:
+                To confirm, type the IRIS Workspace name:
                 <span className="block mt-1 font-black text-[var(--color-text)] tracking-wide">
                   &ldquo;{workspaceName}&rdquo;
                 </span>
@@ -240,7 +240,7 @@ export default function SettingsPage() {
 
               <input
                 type="text" value={confirmName} onChange={(e) => setConfirmName(e.target.value)}
-                placeholder="Type workspace name"
+                placeholder="Type IRIS Workspace name"
                 className="w-full border-2 border-red-100 rounded-lg py-3 px-4 text-sm text-center font-black tracking-wider focus:ring-2 focus:ring-red-300 focus:border-red-400 outline-none transition-all"
               />
 

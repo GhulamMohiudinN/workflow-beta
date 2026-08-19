@@ -118,7 +118,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full flex justify-center items-center py-3 px-4 rounded-lg text-sm font-black text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
             >
-              {loading ? (<><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />Signing in...</>) : "Access Workspace"}
+              {loading ? (<><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />Signing in...</>) : "Access IRIS Workspace"}
             </button>
 
             {error && <p className="text-red-500 text-sm text-center font-medium">{error}</p>}

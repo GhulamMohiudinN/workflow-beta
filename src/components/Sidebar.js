@@ -70,7 +70,7 @@ export const Sidebar = ({
                 WorkflowPro
               </p>
               <p className="truncate text-[10px] font-semibold uppercase text-[var(--color-muted)]">
-                {workspace?.name || "Workspace"}
+                {workspace?.name || "IRIS Workspace"}
               </p>
             </div>
           </Link>

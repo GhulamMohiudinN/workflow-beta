@@ -294,7 +294,7 @@ function CompanySetupContent() {
           const data = await authAPI.verifyEmail(token);
           toast.success(
             data?.message ||
-              "Email verified successfully! Please complete your workspace setup.",
+              "Email verified successfully! Please complete your IRIS Workspace setup.",
           );
           setVerificationError(null);
           setVerifying(false);
@@ -404,7 +404,7 @@ function CompanySetupContent() {
           console.log("Workspace creation response:", response);
 
           setLoading(false);
-          toast.success("Workspace created successfully!");
+          toast.success("IRIS Workspace created successfully!");
           router.push("/login");
 
         } catch (err) {
@@ -412,7 +412,7 @@ function CompanySetupContent() {
           console.error("Error creating workspace:", err);
           console.error("Error details:", err.response?.data || err.message);
 
-          const errorMessage = err.response?.data?.message || "Failed to create workspace. Please try again.";
+          const errorMessage = err.response?.data?.message || "Failed to create IRIS Workspace. Please try again.";
           toast.error(errorMessage);
         }
       }
@@ -475,7 +475,7 @@ function CompanySetupContent() {
               </div>
               <div>
                 <h1 className="text-lg font-black text-[var(--color-text)]">WorkflowPro</h1>
-                <p className="text-xs text-[var(--color-muted)] font-medium">Company Setup Wizard</p>
+                <p className="text-xs text-[var(--color-muted)] font-medium">IRIS Workspace Setup</p>
               </div>
             </div>
             <div className="text-sm font-semibold text-[var(--color-muted)]">Step {currentStep} of {totalSteps}</div>

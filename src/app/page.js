@@ -68,11 +68,11 @@ export default function Home() {
                 Build, assign,<br/>and track your<br/><em>business processes</em>
               </h1>
               <p className="hero-sub">
-                Create structured workflows, assign each step to the right team member, and track progress in real time — all inside your company&apos;s private workspace.
+                Create structured workflows, assign each step to the right team member, and track progress in real time — all inside your company&apos;s private IRIS Workspace.
               </p>
               <div className="hero-actions">
                 <button onClick={handleGetStarted} className="btn-primary">
-                  Create your workspace
+                  Create your IRIS Workspace
                   <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
                   </svg>
@@ -176,7 +176,7 @@ export default function Home() {
             </div>
             <div className="trust-item">
               <div className="trust-icon">👥</div>
-              Multi-tenant workspaces
+              Multi-tenant IRIS Workspaces
             </div>
             <div className="trust-item">
               <div className="trust-icon">⚡</div>
@@ -199,7 +199,7 @@ export default function Home() {
         <div className="container">
           <div className="section-header">
             <span className="section-label">How it works</span>
-            <h2>Your workspace, up and running<br/>in four steps</h2>
+            <h2>Your IRIS Workspace, up and running<br/>in four steps</h2>
             <p>WorkflowPro is built around the way real teams actually operate — not an abstract project board, but a structured process system with clear ownership.</p>
           </div>
           <div className="steps-grid">
@@ -210,8 +210,8 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                 </svg>
               </div>
-              <h3>Create your company workspace</h3>
-              <p>Register your company, set up your profile, and get a fully isolated workspace that belongs only to your organisation.</p>
+              <h3>Create your company IRIS Workspace</h3>
+              <p>Register your company, set up your profile, and get a fully isolated IRIS Workspace that belongs only to your organisation.</p>
             </div>
             <div className="step-card">
               <div className="step-number">02</div>
@@ -221,7 +221,7 @@ export default function Home() {
                 </svg>
               </div>
               <h3>Invite your team members</h3>
-              <p>Add your team by email. Each member gets their own account, sees only what&apos;s assigned to them, and stays connected to your workspace.</p>
+              <p>Add your team by email. Each member gets their own account, sees only what&apos;s assigned to them, and stays connected to your IRIS Workspace.</p>
             </div>
             <div className="step-card">
               <div className="step-number">03</div>
@@ -386,8 +386,8 @@ export default function Home() {
               </div>
               <div className="feature-content">
                 <span className="section-label">Team Management</span>
-                <h2>Your whole team, in one workspace</h2>
-                <p>Invite team members, manage their access, and see exactly what everyone is working on — all from a single dashboard. Every user belongs to your company&apos;s isolated workspace.</p>
+                <h2>Your whole team, in one IRIS Workspace</h2>
+                <p>Invite team members, manage their access, and see exactly what everyone is working on — all from a single dashboard. Every user belongs to your company&apos;s isolated IRIS Workspace.</p>
                 <ul className="feature-list">
                   <li>
                     <div className="feature-list-icon">
@@ -432,7 +432,7 @@ export default function Home() {
             <div className="stats-grid">
               <div className="stat-item">
                 <div className="stat-number"><span>∞</span></div>
-                <div className="stat-desc">Processes per workspace — build as many as your operation requires</div>
+                <div className="stat-desc">Processes per IRIS Workspace — build as many as your operation requires</div>
               </div>
               <div className="stat-item">
                 <div className="stat-number">100<span>%</span></div>
