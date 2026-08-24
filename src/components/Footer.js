@@ -1,5 +1,5 @@
 export const Footer = ({
-  copyrightText = "WorkflowPro AI",
+  copyrightText = "IRIS Workspace",
   year = new Date().getFullYear(),
 }) => {
   return (

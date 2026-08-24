@@ -65,7 +65,7 @@ export default function LoginPage() {
               <div className="bg-blue-50 p-2 rounded-lg border border-blue-100">
                 <FiBriefcase className="h-5 w-5 text-[var(--color-primary)]" />
               </div>
-              <h2 className="text-2xl font-black text-[var(--color-text)]">WorkflowPro</h2>
+              <h2 className="text-2xl font-black text-[var(--color-text)]">IRIS Workspace</h2>
             </div>
             <p className="text-sm text-[var(--color-muted)] font-medium">Enterprise Workflow Management Platform</p>
           </div>

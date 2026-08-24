@@ -1296,25 +1296,6 @@ export default function NewProcessPage() {
                   </div>
                 </div>
 
-                <div className="border-t border-slate-200 pt-3">
-                  <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <FiZap className="h-5 w-5 text-blue-700" />
-                      <p className="text-sm font-bold text-slate-900">
-                        AI Ready
-                      </p>
-                    </div>
-                    <p className="text-xs text-slate-600">
-                      After creation, AI will analyze your workflow and suggest:
-                    </p>
-                    <ul className="mt-2 list-inside list-disc space-y-1 text-xs text-slate-600">
-                      <li>Optimization opportunities</li>
-                      <li>Automation suggestions</li>
-                      <li>Bottleneck detection</li>
-                      <li>Cost reduction ideas</li>
-                    </ul>
-                  </div>
-                </div>
               </div>
             </div>
           </div>

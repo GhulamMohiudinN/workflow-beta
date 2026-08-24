@@ -107,7 +107,7 @@ export const Header = ({
                   {displayName}
                 </p>
                 <p className="text-[10px] font-medium text-[var(--color-muted)]">
-                  {workspace?.name || "Administrator"}
+                  {workspace?.name || "IRIS Workspace"}
                 </p>
               </div>
               <Avatar src={user?.profilePicture} name={displayName} size="sm" />

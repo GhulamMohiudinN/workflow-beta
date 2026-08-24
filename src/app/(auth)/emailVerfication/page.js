@@ -147,7 +147,7 @@ function EmailVerificationContent() {
             <FiShield className="h-3.5 w-3.5 text-[var(--color-primary)]" />
             All verification emails are encrypted.
           </div>
-          <p className="mt-1 text-xs text-[var(--color-faint)] font-medium">WorkflowPro · Enterprise Workflow Management Platform</p>
+          <p className="mt-1 text-xs text-[var(--color-faint)] font-medium">IRIS Workspace · Enterprise Workflow Management Platform</p>
         </div>
       </div>
     </div>

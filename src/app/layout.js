@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   title: "ALR",
-  description: "WorkflowPro",
+  description: "IRIS Workspace",
 };
 
 export default function RootLayout({ children }) {

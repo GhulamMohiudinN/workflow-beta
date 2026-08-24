@@ -210,7 +210,7 @@ function buildNodesAndEdges(steps) {
         ? step.assignee.name
         : step.assignee && step.assignee !== "Unassigned"
         ? step.assignee
-        : "WorkflowPro";
+        : "IRIS Workspace";
 
     return {
       id: step.id,

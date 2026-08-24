@@ -7,7 +7,7 @@ import {
   FiActivity, FiClock, FiLayers, FiUserPlus, FiEdit2,
   FiCheckCircle, FiAlertCircle, FiRefreshCw, FiUser,
   FiChevronLeft, FiChevronRight, FiMaximize2, FiInfo,
-  FiSearch, FiX, FiShield, FiList,
+  FiSearch, FiX, FiShield, FiList, FiUploadCloud, FiMessageSquare,
 } from "react-icons/fi";
 import { Card, CardContent, CardHeader } from "../../../components/Card";
 import { Button } from "../../../components/Button";
@@ -33,6 +33,16 @@ const ACTION_META = {
   update_process: { icon: FiEdit2,        toneClass: "bg-amber-50 text-amber-600",  badgeVariant: "warning",   label: "Update Process" },
   complete_task:  { icon: FiCheckCircle,  toneClass: "bg-emerald-50 text-emerald-600", badgeVariant: "success", label: "Complete Task" },
   remove_member:  { icon: FiAlertCircle,  toneClass: "bg-red-50 text-red-600",      badgeVariant: "danger",    label: "Remove Member"  },
+
+  create_iris_requirement:   { icon: FiShield,       toneClass: "bg-blue-50 text-blue-600",       badgeVariant: "primary",   label: "Create IRIS Obligation" },
+  update_iris_requirement:   { icon: FiEdit2,         toneClass: "bg-amber-50 text-amber-600",     badgeVariant: "warning",   label: "Update IRIS Obligation" },
+  delete_iris_requirement:   { icon: FiAlertCircle,   toneClass: "bg-red-50 text-red-600",         badgeVariant: "danger",    label: "Delete IRIS Obligation" },
+  upload_iris_evidence:      { icon: FiUploadCloud,   toneClass: "bg-teal-50 text-teal-600",       badgeVariant: "secondary", label: "Upload Evidence"        },
+  delete_iris_evidence:      { icon: FiAlertCircle,   toneClass: "bg-red-50 text-red-600",         badgeVariant: "danger",    label: "Delete Evidence"        },
+  decide_iris_approval_step: { icon: FiCheckCircle,   toneClass: "bg-emerald-50 text-emerald-600", badgeVariant: "success",   label: "Approval Decision"      },
+  add_iris_comment:          { icon: FiMessageSquare, toneClass: "bg-indigo-50 text-indigo-600",   badgeVariant: "secondary", label: "IRIS Comment"           },
+  delete_iris_comment:       { icon: FiAlertCircle,   toneClass: "bg-red-50 text-red-600",         badgeVariant: "danger",    label: "Delete Comment"         },
+
   default:        { icon: FiActivity,     toneClass: "bg-slate-50 text-slate-500",  badgeVariant: "outline",   label: "Activity"       },
 };
 

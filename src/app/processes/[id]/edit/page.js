@@ -1137,17 +1137,6 @@ function PreviewPanel({ formData }) {
               )}
             </div>
           </div>
-          <div className="border-t border-slate-200 pt-3">
-            <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
-              <div className="mb-2 flex items-center gap-2">
-                <FiZap className="h-5 w-5 text-blue-700" />
-                <p className="text-sm font-bold text-slate-900">AI Ready</p>
-              </div>
-              <p className="text-xs text-slate-600">
-                After saving, AI can analyze the workflow and suggest optimizations.
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

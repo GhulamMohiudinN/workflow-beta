@@ -75,7 +75,7 @@ export default function UserLayout({ children }) {
             <div className="bg-[var(--color-primary)] p-2 rounded-lg">
               <FiBriefcase className="h-5 w-5 text-white" />
             </div>
-            <span className="font-black text-[var(--color-text)]">WorkflowPro</span>
+            <span className="font-black text-[var(--color-text)]">IRIS Workspace</span>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}

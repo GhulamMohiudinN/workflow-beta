@@ -28,7 +28,7 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                 </svg>
               </div>
-              <span className="logo-name">WorkflowPro</span>
+              <span className="logo-name">IRIS Workspace</span>
             </div>
             <div className="nav-links">
               <a href="#how-it-works">How it works</a>
@@ -200,7 +200,7 @@ export default function Home() {
           <div className="section-header">
             <span className="section-label">How it works</span>
             <h2>Your IRIS Workspace, up and running<br/>in four steps</h2>
-            <p>WorkflowPro is built around the way real teams actually operate — not an abstract project board, but a structured process system with clear ownership.</p>
+            <p>IRIS Workspace is built around the way real teams actually operate — not an abstract project board, but a structured process system with clear ownership.</p>
           </div>
           <div className="steps-grid">
             <div className="step-card">
@@ -428,7 +428,7 @@ export default function Home() {
           <div className="stats-inner">
             <div className="stats-label">Built for real operational work</div>
             <h2 className="stats-heading">Everything your processes need.<br/>Nothing they don&apos;t.</h2>
-            <p className="stats-sub">WorkflowPro is designed around one idea: structured work, clearly owned, reliably tracked.</p>
+            <p className="stats-sub">IRIS Workspace is designed around one idea: structured work, clearly owned, reliably tracked.</p>
             <div className="stats-grid">
               <div className="stat-item">
                 <div className="stat-number"><span>∞</span></div>
@@ -563,9 +563,9 @@ export default function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                   </svg>
                 </div>
-                <span className="footer-logo-name">WorkflowPro</span>
+                <span className="footer-logo-name">IRIS Workspace</span>
               </div>
-              <p>Enterprise workflow management platform powered by AI and MongoDB.</p>
+              <p>Enterprise workflow management platform powered by MongoDB.</p>
             </div>
             <div className="footer-col">
               <h4>Product</h4>
@@ -595,7 +595,7 @@ export default function Home() {
             </div>
           </div>
           <div className="footer-bottom">
-            <p>© {new Date().getFullYear()} WorkflowPro. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} IRIS Workspace. All rights reserved.</p>
             <p>Built with MongoDB · Enterprise-ready · SOC 2 Type II Certified</p>
           </div>
         </div>

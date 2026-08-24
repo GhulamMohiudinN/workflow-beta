@@ -33,7 +33,6 @@ import {
   FiLayers,
   FiShield,
   FiUser,
-  FiZap,
   FiAlertCircle,
   FiSearch,
   FiClock,
@@ -474,8 +473,8 @@ function CompanySetupContent() {
                 <FiBriefcase className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-black text-[var(--color-text)]">WorkflowPro</h1>
-                <p className="text-xs text-[var(--color-muted)] font-medium">IRIS Workspace Setup</p>
+                <h1 className="text-lg font-black text-[var(--color-text)]">IRIS Workspace</h1>
+                <p className="text-xs text-[var(--color-muted)] font-medium">Company Setup</p>
               </div>
             </div>
             <div className="text-sm font-semibold text-[var(--color-muted)]">Step {currentStep} of {totalSteps}</div>
@@ -892,20 +891,6 @@ function CompanySetupContent() {
                 </div>
               </div>
 
-              <div className="p-4 bg-linear-to-r from-blue-50 to-blue-50 rounded-lg border border-[var(--color-border)]">
-                <div className="flex items-start space-x-3">
-                  <FiZap className="h-5 w-5 text-[var(--color-primary)] mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 mb-1">
-                      AI-Powered Suggestions
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      Based on your selections, our AI will suggest optimal
-                      workflow structures and automation opportunities.
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
 
@@ -1083,7 +1068,7 @@ function CompanySetupContent() {
             Your data is securely stored with enterprise encryption.
           </p>
           <p className="mt-2 text-xs text-gray-400">
-            WorkflowPro • Enterprise Workflow Management Platform
+            IRIS Workspace • Enterprise Workflow Management Platform
           </p>
         </div>
       </footer>

@@ -28,7 +28,6 @@ import {
   FiClock,
   FiDollarSign,
   FiTag,
-  FiZap,
   FiAlertCircle,
   FiDownload,
   FiCopy,
@@ -108,12 +107,6 @@ function SortableItem({
               >
                 {getStatusText(activity.status)}
               </span>
-              {activity.automation && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-700 flex items-center gap-1">
-                  <FiZap className="h-3 w-3" />
-                  AI Auto
-                </span>
-              )}
             </div>
             <p className="text-sm text-gray-600">{activity.description}</p>
           </div>
@@ -746,9 +739,6 @@ export default function ProcessDetailPage() {
                             {activity.name}
                           </h3>
                         </div>
-                        {activity.automation && (
-                          <FiZap className="h-4 w-4 text-cyan-600" />
-                        )}
                       </div>
                       <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                         {activity.description}
@@ -1128,20 +1118,6 @@ export default function ProcessDetailPage() {
                   {selectedActivity.faq || "No FAQs available"}
                 </p>
               </div>
-              {selectedActivity.automation && (
-                <div className="bg-gradient-to-r from-cyan-50 to-emerald-50 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FiZap className="h-5 w-5 text-cyan-700" />
-                    <p className="font-semibold text-cyan-900">
-                      AI Automation Available
-                    </p>
-                  </div>
-                  <p className="text-sm text-cyan-700">
-                    This step can be automated using AI to reduce manual effort
-                    by up to 80%.
-                  </p>
-                </div>
-              )}
             </div>
           </div>
         </div>

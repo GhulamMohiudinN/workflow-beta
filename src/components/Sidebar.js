@@ -67,7 +67,7 @@ export const Sidebar = ({
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-black text-[var(--color-text)]">
-                WorkflowPro
+                IRIS Workspace
               </p>
               <p className="truncate text-[10px] font-semibold uppercase text-[var(--color-muted)]">
                 {workspace?.name || "IRIS Workspace"}

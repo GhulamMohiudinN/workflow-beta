@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FiAlertCircle, FiAlertTriangle, FiCheckCircle, FiChevronDown,
-  FiChevronUp, FiClock, FiDatabase, FiDownload, FiEdit2,
-  FiFileText, FiMessageSquare, FiPlus, FiRefreshCw,
+  FiChevronLeft, FiChevronRight, FiChevronUp, FiClock, FiDatabase, FiDownload, FiEdit2,
+  FiFileText, FiMessageSquare, FiPlus, FiRefreshCw, FiSearch,
   FiSend, FiShield, FiTrash2, FiUploadCloud, FiUser, FiX,
 } from "react-icons/fi";
 import toast, { Toaster } from "react-hot-toast";
 import { irisReportingAPI } from "../../api/irisReportingAPI";
+import { userAPI } from "../../api/userAPI";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const TABS = ["Dashboard", "Obligations", "Approvals", "Report Pack"];
@@ -39,7 +40,7 @@ const EMPTY_FORM = {
   title: "", source: "", legislationRef: "", category: "Reporting",
   obligationType: "reporting", status: "planned", dueDate: "",
   owner: "", reportType: "Statutory report", materiality: "Standard",
-  approvalRequired: false, evidenceRequired: [""], details: "",
+  approvalRequired: false, evidenceRequired: [""], approvalSteps: [], details: "",
   legislationVersion: "", ruleVersion: "1.0", reportingPeriod: "",
 };
 
@@ -109,7 +110,7 @@ function Tab({ label, active, onClick, count }) {
 }
 
 // ─── Obligation Form ──────────────────────────────────────────────────────────
-function ObligationForm({ form, setForm, onSubmit, saving, onCancel, editId, pendingFiles, setPendingFiles, legislationLibrary }) {
+function ObligationForm({ form, setForm, onSubmit, saving, onCancel, editId, pendingFiles, setPendingFiles, legislationLibrary, members }) {
   const dropRef = useRef(null);
   const [dragging, setDragging] = useState(false);
   const [legSearch, setLegSearch] = useState("");
@@ -286,6 +287,48 @@ function ObligationForm({ form, setForm, onSubmit, saving, onCancel, editId, pen
         </div>
       </div>
 
+      {form.approvalRequired && (
+        <div>
+          <label className="text-xs font-semibold text-slate-600 mb-2 block">Approval Steps</label>
+          <div className="space-y-2">
+            {form.approvalSteps.map((step, i) => (
+              <div key={step._id || `new-${i}`} className="flex gap-2">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-xs font-black text-slate-500">
+                  {i + 1}
+                </span>
+                <input value={step.stepName || ""}
+                  onChange={(e) => { const n = [...form.approvalSteps]; n[i] = { ...n[i], stepName: e.target.value }; setForm({ ...form, approvalSteps: n }); }}
+                  placeholder="Step name (e.g. CFO Review)"
+                  className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                <AssigneeAutocomplete
+                  value={step.assignedTo || ""}
+                  members={members}
+                  onChange={(val) => { const n = [...form.approvalSteps]; n[i] = { ...n[i], assignedTo: val }; setForm({ ...form, approvalSteps: n }); }}
+                />
+                {step.status && step.status !== "pending" && (
+                  <span className="shrink-0 self-center"><ApprovalBadge status={step.status} /></span>
+                )}
+                <button type="button"
+                  onClick={() => { const n = form.approvalSteps.filter((_, idx) => idx !== i); setForm({ ...form, approvalSteps: n }); }}
+                  className="rounded-lg border border-slate-200 bg-white px-3 text-sm text-red-500 hover:bg-red-50">
+                  <FiX size={14} />
+                </button>
+              </div>
+            ))}
+            {form.approvalSteps.length === 0 && (
+              <p className="text-xs text-amber-600 italic">
+                No approval steps yet — this obligation can never be marked Completed until at least one step is added and approved.
+              </p>
+            )}
+          </div>
+          <button type="button"
+            onClick={() => setForm({ ...form, approvalSteps: [...form.approvalSteps, { stepName: "", assignedTo: "" }] })}
+            className="mt-2 flex items-center gap-1.5 text-xs font-bold text-blue-700 hover:text-blue-900">
+            <FiPlus size={12} /> Add approval step
+          </button>
+        </div>
+      )}
+
       <div>
         <label className="text-xs font-semibold text-slate-600 mb-1 block">Details / Context</label>
         <textarea value={form.details} rows={3} onChange={(e) => setForm({ ...form, details: e.target.value })}
@@ -399,6 +442,56 @@ function ObligationForm({ form, setForm, onSubmit, saving, onCancel, editId, pen
   );
 }
 
+// ─── Assignee Autocomplete — search workspace members by name/email ───────────
+function AssigneeAutocomplete({ value, onChange, members = [] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    const q = (value || "").trim().toLowerCase();
+    if (!q) return members;
+    return members.filter((m) =>
+      (m.name || "").toLowerCase().includes(q) || (m.email || "").toLowerCase().includes(q)
+    );
+  }, [value, members]);
+
+  return (
+    <div className="relative flex-1" ref={ref}>
+      <input
+        value={value || ""}
+        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        placeholder="Assigned to — search team member or type a name"
+        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 outline-none"
+      />
+      {open && filtered.length > 0 && (
+        <div className="absolute z-[300] left-0 right-0 top-full mt-1 max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
+          {filtered.slice(0, 8).map((m) => (
+            <button key={m._id} type="button"
+              onClick={() => { onChange(m.name || m.email); setOpen(false); }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-blue-50 transition-colors">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[10px] font-black text-blue-700">
+                {(m.name || m.email || "?").slice(0, 1).toUpperCase()}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate font-semibold text-slate-800">{m.name || m.email}</span>
+                {m.role && <span className="block truncate text-[11px] text-slate-400 capitalize">{m.role}</span>}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Obligation Card ──────────────────────────────────────────────────────────
 function ObligationCard({
   item, onEdit, onDelete, onUpload, onDeleteFile, onDownload,
@@ -437,10 +530,17 @@ function ObligationCard({
     <div className={`rounded-2xl border shadow-sm overflow-hidden transition-all ${overdue ? "border-red-200 bg-red-50/30" : "border-slate-200 bg-white"}`}>
 
       {/* ── Clickable summary row — click anywhere to expand ─────────────── */}
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setExpanded((v) => !v)}
-        className="w-full text-left"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setExpanded((v) => !v);
+          }
+        }}
+        className="w-full text-left cursor-pointer"
       >
         <div className="flex flex-wrap items-start justify-between gap-3 p-5">
           <div className="flex-1 min-w-0">
@@ -479,7 +579,7 @@ function ObligationCard({
               className="rounded-lg border border-slate-200 bg-white p-2 text-slate-500 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 transition-colors" title="Edit obligation">
               <FiEdit2 size={14} />
             </button>
-            <button onClick={() => onDelete(item._id)}
+            <button onClick={() => onDelete(item)}
               className="rounded-lg border border-red-100 bg-white p-2 text-red-400 hover:border-red-300 hover:bg-red-50 hover:text-red-600 transition-colors" title="Delete obligation">
               <FiTrash2 size={14} />
             </button>
@@ -502,7 +602,7 @@ function ObligationCard({
             </div>
           ))}
         </div>
-      </button>
+      </div>
 
       {/* ── Expanded body ────────────────────────────────────────────────── */}
       {expanded && (
@@ -746,17 +846,40 @@ export default function IrisReportingPage() {
   const [saving,       setSaving]       = useState(false);
   const [uploadingId,  setUploadingId]  = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [searchQuery,  setSearchQuery]  = useState("");
+  const [page,         setPage]         = useState(1);
   const [pendingFiles, setPendingFiles] = useState([]);
   const [legLibrary,   setLegLibrary]   = useState([]);
+  const [members,      setMembers]      = useState([]);
   const [ruleWarnings, setRuleWarnings] = useState([]);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting,     setDeleting]     = useState(false);
+
+  const PAGE_SIZE = 10;
 
   const summary      = useMemo(() => data?.summary      || null, [data]);
   const requirements = useMemo(() => data?.requirements || [],   [data]);
 
   const filtered = useMemo(() => {
-    if (filterStatus === "all") return requirements;
-    return requirements.filter((r) => r.status === filterStatus);
-  }, [requirements, filterStatus]);
+    let list = requirements;
+    if (filterStatus !== "all") list = list.filter((r) => r.status === filterStatus);
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter((r) =>
+        (r.title || "").toLowerCase().includes(q) ||
+        (r.owner || "").toLowerCase().includes(q) ||
+        (r.legislationRef || "").toLowerCase().includes(q) ||
+        (r.source || "").toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [requirements, filterStatus, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, page]);
 
   const pendingApprovals = useMemo(() =>
     requirements.filter((r) => r.approvalRequired && (!r.approvalStatus || r.approvalStatus === "pending")),
@@ -767,10 +890,11 @@ export default function IrisReportingPage() {
     else setRefreshing(true);
     setError(null);
 
-    // Fetch overview and legislation library in parallel
-    const [overviewRes, libRes] = await Promise.all([
+    // Fetch overview, legislation library, and workspace members in parallel
+    const [overviewRes, libRes, membersRes] = await Promise.all([
       irisReportingAPI.getOverview(),
       irisReportingAPI.getLegislationLibrary(),
+      userAPI.getWorkspaceUsers({ limit: 100 }),
     ]);
 
     if (overviewRes.success) setData(overviewRes.data);
@@ -779,6 +903,8 @@ export default function IrisReportingPage() {
     if (libRes.success && Array.isArray(libRes.data?.library)) {
       setLegLibrary(libRes.data.library);
     }
+
+    if (membersRes.success) setMembers(membersRes.users);
 
     setLoading(false);
     setRefreshing(false);
@@ -792,7 +918,15 @@ export default function IrisReportingPage() {
     e.preventDefault();
     setSaving(true);
     setRuleWarnings([]);
-    const payload = { ...form, evidenceRequired: form.evidenceRequired.filter(Boolean) };
+    const payload = {
+      ...form,
+      evidenceRequired: form.evidenceRequired.filter(Boolean),
+      approvalSteps: form.approvalRequired
+        ? form.approvalSteps
+            .filter((s) => s.stepName?.trim())
+            .map((s, i) => ({ ...s, order: i + 1 }))
+        : [],
+    };
 
     // Dry-run validation to surface warnings before saving
     const validation = await irisReportingAPI.validateRequirement(payload, editId || null);
@@ -835,6 +969,7 @@ export default function IrisReportingPage() {
       owner: item.owner || "", reportType: item.reportType || "Statutory report",
       materiality: item.materiality || "Standard", approvalRequired: Boolean(item.approvalRequired),
       evidenceRequired: item.evidenceRequired?.length ? item.evidenceRequired : [""],
+      approvalSteps: item.approvalSteps?.length ? item.approvalSteps.map((s) => ({ ...s })) : [],
       details: item.details || "", legislationVersion: item.legislationVersion || "",
       ruleVersion: item.ruleVersion || "1.0", reportingPeriod: item.reportingPeriod || "",
     });
@@ -844,11 +979,16 @@ export default function IrisReportingPage() {
     setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 100);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this obligation? This cannot be undone.")) return;
-    const res = await irisReportingAPI.deleteRequirement(id);
+  const handleDelete = (item) => setDeleteTarget(item);
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const res = await irisReportingAPI.deleteRequirement(deleteTarget._id);
     if (res.success) { toast.success("Obligation deleted"); await loadData(true); }
     else toast.error(res.error || "Failed to delete");
+    setDeleting(false);
+    setDeleteTarget(null);
   };
 
   const handleUpload = async (reqId, file) => {
@@ -1068,7 +1208,7 @@ export default function IrisReportingPage() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
                   {["all", "planned", "in_progress", "completed", "blocked"].map((s) => (
-                    <button key={s} onClick={() => setFilterStatus(s)}
+                    <button key={s} onClick={() => { setFilterStatus(s); setPage(1); }}
                       className={`rounded-md px-3 py-1.5 text-xs font-bold transition-colors ${
                         filterStatus === s ? "bg-blue-700 text-white" : "text-slate-500 hover:text-slate-900"
                       }`}>
@@ -1079,9 +1219,27 @@ export default function IrisReportingPage() {
                 <p className="text-xs font-semibold text-slate-500">{filtered.length} obligation{filtered.length !== 1 ? "s" : ""}</p>
               </div>
 
+              {/* Search */}
+              <div className="relative">
+                <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+                  placeholder="Search obligations by title, owner, or legislation reference…"
+                  className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-9 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                />
+                {searchQuery && (
+                  <button type="button" onClick={() => { setSearchQuery(""); setPage(1); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    <FiX size={14} />
+                  </button>
+                )}
+              </div>
+
               {/* Obligation cards */}
               <div className="space-y-4">
-                {filtered.map((item) => (
+                {paginated.map((item) => (
                   <ObligationCard key={item._id} item={item}
                     onEdit={handleEdit} onDelete={handleDelete}
                     onUpload={handleUpload} onDeleteFile={handleDeleteFile}
@@ -1093,10 +1251,34 @@ export default function IrisReportingPage() {
                 {filtered.length === 0 && !showForm && (
                   <div className="flex flex-col items-center justify-center py-12 text-center text-slate-400">
                     <FiShield size={32} className="mb-3 opacity-30" />
-                    <p className="text-sm font-semibold">No obligations{filterStatus !== "all" ? ` with status "${filterStatus.replace("_"," ")}"` : ""}</p>
+                    <p className="text-sm font-semibold">
+                      No obligations
+                      {searchQuery ? ` matching "${searchQuery}"` : filterStatus !== "all" ? ` with status "${filterStatus.replace("_"," ")}"` : ""}
+                    </p>
                   </div>
                 )}
               </div>
+
+              {/* Pagination */}
+              {filtered.length > PAGE_SIZE && (
+                <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                  <p className="text-xs font-semibold text-slate-500">
+                    Page {page} of {totalPages}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button type="button" disabled={page <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">
+                      <FiChevronLeft size={13} /> Prev
+                    </button>
+                    <button type="button" disabled={page >= totalPages}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">
+                      Next <FiChevronRight size={13} />
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* ── New / Edit obligation form — ALWAYS at the bottom ──────── */}
               {showForm ? (
@@ -1115,7 +1297,8 @@ export default function IrisReportingPage() {
                   <ObligationForm form={form} setForm={setForm} onSubmit={handleSubmit}
                     saving={saving} onCancel={resetForm} editId={editId}
                     pendingFiles={pendingFiles} setPendingFiles={setPendingFiles}
-                    legislationLibrary={legLibrary} />
+                    legislationLibrary={legLibrary}
+                    members={members} />
                 </>
               ) : (
                 <button
@@ -1220,6 +1403,63 @@ export default function IrisReportingPage() {
             </div>
           )}
 
+        </div>
+      </div>
+
+      {deleteTarget && (
+        <DeleteObligationModal
+          title={deleteTarget.title}
+          loading={deleting}
+          onClose={() => !deleting && setDeleteTarget(null)}
+          onConfirm={confirmDelete}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Delete Confirmation Modal ─────────────────────────────────────────────────
+function DeleteObligationModal({ title, loading, onClose, onConfirm }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label="Close delete dialog"
+        className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-md rounded-xl bg-white p-8 text-center shadow-2xl">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-red-50 text-red-600">
+          <FiAlertCircle className="h-7 w-7" />
+        </div>
+        <h2 className="text-xl font-black text-slate-950">Delete Obligation?</h2>
+        <p className="mx-auto mt-2 max-w-sm text-sm font-medium text-slate-600">
+          Are you sure you want to delete{" "}
+          <span className="font-bold text-slate-950">{title || "this obligation"}</span>?
+          This action cannot be undone.
+        </p>
+        <div className="mt-6 flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+            ) : (
+              <FiTrash2 className="h-4 w-4" />
+            )}
+            Delete
+          </button>
         </div>
       </div>
     </div>
