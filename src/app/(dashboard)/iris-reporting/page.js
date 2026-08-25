@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FiAlertCircle, FiAlertTriangle, FiCheckCircle, FiChevronDown,
   FiChevronLeft, FiChevronRight, FiChevronUp, FiClock, FiDatabase, FiDownload, FiEdit2,
-  FiFileText, FiMessageSquare, FiPlus, FiRefreshCw, FiSearch,
+  FiFileText, FiMail, FiMessageSquare, FiPlus, FiRefreshCw, FiSearch,
   FiSend, FiShield, FiTrash2, FiUploadCloud, FiUser, FiX,
 } from "react-icons/fi";
 import toast, { Toaster } from "react-hot-toast";
@@ -39,7 +39,7 @@ const MAT_COLOR = {
 const EMPTY_FORM = {
   title: "", source: "", legislationRef: "", category: "Reporting",
   obligationType: "reporting", status: "planned", dueDate: "",
-  owner: "", reportType: "Statutory report", materiality: "Standard",
+  owner: "", ownerEmail: "", reportType: "Statutory report", materiality: "Standard",
   approvalRequired: false, evidenceRequired: [""], approvalSteps: [], details: "",
   legislationVersion: "", ruleVersion: "1.0", reportingPeriod: "",
 };
@@ -234,10 +234,21 @@ function ObligationForm({ form, setForm, onSubmit, saving, onCancel, editId, pen
           </select>
         </div>
         <div>
-          <label className="text-xs font-semibold text-slate-600 mb-1 block">Owner</label>
-          <input value={form.owner} onChange={(e) => setForm({ ...form, owner: e.target.value })}
-            placeholder="e.g. Chief Finance Officer"
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-blue-500 outline-none" />
+          <label className="text-xs font-semibold text-slate-600 mb-1 flex items-center gap-1.5">
+            Owner
+            {form.ownerEmail && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">
+                <FiMail size={9} /> reminders enabled
+              </span>
+            )}
+          </label>
+          <AssigneeAutocomplete
+            value={form.owner}
+            members={members}
+            placeholder="e.g. Chief Finance Officer, or search team member"
+            onChange={(val) => setForm({ ...form, owner: val, ownerEmail: "" })}
+            onSelectMember={(m) => setForm({ ...form, owner: m.name || m.email, ownerEmail: m.email || "" })}
+          />
         </div>
         <div>
           <label className="text-xs font-semibold text-slate-600 mb-1 block">Due Date</label>
@@ -443,7 +454,7 @@ function ObligationForm({ form, setForm, onSubmit, saving, onCancel, editId, pen
 }
 
 // ─── Assignee Autocomplete — search workspace members by name/email ───────────
-function AssigneeAutocomplete({ value, onChange, members = [] }) {
+function AssigneeAutocomplete({ value, onChange, onSelectMember, members = [], placeholder }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -468,14 +479,18 @@ function AssigneeAutocomplete({ value, onChange, members = [] }) {
         value={value || ""}
         onChange={(e) => { onChange(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
-        placeholder="Assigned to — search team member or type a name"
+        placeholder={placeholder || "Search team member or type a name"}
         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 outline-none"
       />
       {open && filtered.length > 0 && (
         <div className="absolute z-[300] left-0 right-0 top-full mt-1 max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
           {filtered.slice(0, 8).map((m) => (
             <button key={m._id} type="button"
-              onClick={() => { onChange(m.name || m.email); setOpen(false); }}
+              onClick={() => {
+                if (onSelectMember) onSelectMember(m);
+                else onChange(m.name || m.email);
+                setOpen(false);
+              }}
               className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-blue-50 transition-colors">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[10px] font-black text-blue-700">
                 {(m.name || m.email || "?").slice(0, 1).toUpperCase()}
@@ -968,7 +983,7 @@ export default function IrisReportingPage() {
       legislationRef: item.legislationRef || "", category: item.category || "Reporting",
       obligationType: item.obligationType || "reporting", status: item.status || "planned",
       dueDate: item.dueDate ? new Date(item.dueDate).toISOString().slice(0, 10) : "",
-      owner: item.owner || "", reportType: item.reportType || "Statutory report",
+      owner: item.owner || "", ownerEmail: item.ownerEmail || "", reportType: item.reportType || "Statutory report",
       materiality: item.materiality || "Standard", approvalRequired: Boolean(item.approvalRequired),
       evidenceRequired: item.evidenceRequired?.length ? item.evidenceRequired : [""],
       approvalSteps: item.approvalSteps?.length ? item.approvalSteps.map((s) => ({ ...s })) : [],
