@@ -854,6 +854,8 @@ export default function IrisReportingPage() {
   const [ruleWarnings, setRuleWarnings] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting,     setDeleting]     = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importing,       setImporting]       = useState(false);
 
   const PAGE_SIZE = 10;
 
@@ -991,6 +993,27 @@ export default function IrisReportingPage() {
     setDeleteTarget(null);
   };
 
+  const confirmBulkImport = async () => {
+    setImporting(true);
+    const res = await irisReportingAPI.bulkImportFromLibrary();
+    if (res.success) {
+      const { imported, skipped } = res.data || {};
+      if (imported > 0) {
+        toast.success(
+          `Imported ${imported} obligation${imported === 1 ? "" : "s"}` +
+          (skipped > 0 ? ` — ${skipped} already existed and were skipped` : "")
+        );
+        await loadData(true);
+      } else {
+        toast("Nothing new to import — every legislation reference already has an obligation.");
+      }
+    } else {
+      toast.error(res.error || "Import failed");
+    }
+    setImporting(false);
+    setShowImportModal(false);
+  };
+
   const handleUpload = async (reqId, file) => {
     setUploadingId(reqId);
     const res = await irisReportingAPI.uploadEvidenceFile(reqId, file);
@@ -1106,15 +1129,22 @@ export default function IrisReportingPage() {
             <Tab key={t} label={t} active={activeTab === t} onClick={() => setActiveTab(t)}
               count={t === "Approvals" ? pendingApprovals.length : t === "Obligations" ? requirements.length : undefined} />
           ))}
-          <div className="ml-auto flex items-center px-4">
+          <div className="ml-auto flex items-center gap-2 px-4">
             {activeTab === "Obligations" && (
-              <button
-                onClick={() => { setEditId(null); setForm(EMPTY_FORM); setPendingFiles([]); setShowForm(true);
-                  setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 100);
-                }}
-                className="flex items-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-xs font-bold text-white hover:bg-blue-800 transition-colors">
-                <FiPlus size={13} /> New Obligation
-              </button>
+              <>
+                <button
+                  onClick={() => setShowImportModal(true)}
+                  className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100 transition-colors">
+                  <FiDownload size={13} /> Import from Library
+                </button>
+                <button
+                  onClick={() => { setEditId(null); setForm(EMPTY_FORM); setPendingFiles([]); setShowForm(true);
+                    setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 100);
+                  }}
+                  className="flex items-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-xs font-bold text-white hover:bg-blue-800 transition-colors">
+                  <FiPlus size={13} /> New Obligation
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -1414,6 +1444,63 @@ export default function IrisReportingPage() {
           onConfirm={confirmDelete}
         />
       )}
+
+      {showImportModal && (
+        <ImportLibraryModal
+          count={legLibrary.length}
+          loading={importing}
+          onClose={() => !importing && setShowImportModal(false)}
+          onConfirm={confirmBulkImport}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Import-from-Library Confirmation Modal ────────────────────────────────────
+function ImportLibraryModal({ count, loading, onClose, onConfirm }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label="Close import dialog"
+        className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-md rounded-xl bg-white p-8 text-center shadow-2xl">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+          <FiDownload className="h-7 w-7" />
+        </div>
+        <h2 className="text-xl font-black text-slate-950">Import from Legislation Library?</h2>
+        <p className="mx-auto mt-2 max-w-sm text-sm font-medium text-slate-600">
+          This creates an obligation for every one of the <span className="font-bold text-slate-950">{count}</span> legislation
+          references in your library (FMA, Standing Directions, AASB, and others) that isn&apos;t already tracked here. Entries
+          already present are skipped — safe to run more than once.
+        </p>
+        <div className="mt-6 flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+            ) : (
+              <FiDownload className="h-4 w-4" />
+            )}
+            Import All
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

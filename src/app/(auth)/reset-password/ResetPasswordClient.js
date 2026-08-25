@@ -9,7 +9,7 @@ import { authAPI } from "../../api/auth";
 import Link from "next/link";
 import toast, { Toaster } from "react-hot-toast";
 import {
-  FiEye, FiEyeOff, FiLock, FiBriefcase, FiCheckCircle,
+  FiEye, FiEyeOff, FiLock, FiCheckCircle,
 } from "react-icons/fi";
 
 export default function ResetPasswordClient() {
@@ -74,9 +74,7 @@ export default function ResetPasswordClient() {
 
           {/* Logo */}
           <div className="flex justify-center mb-6">
-            <div className="bg-[var(--color-primary)] p-3 rounded-xl shadow-md">
-              <FiBriefcase className="w-8 h-8 text-white" />
-            </div>
+            <img src="/logo.png" alt="IRIS Workspace" className="h-14 w-14 rounded-[7px] object-contain shadow-md" />
           </div>
 
           <div className="text-center mb-8">

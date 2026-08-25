@@ -40,6 +40,11 @@ export const irisReportingAPI = {
   // ── Legislation Library ────────────────────────────────────────────────────
   getLegislationLibrary: () => call(() => api.get("/iris-reporting/legislation-library")),
 
+  // ── Bulk import obligations from the legislation library ────────────────────
+  // Pass an array of refs to import a subset, or omit for "import everything".
+  bulkImportFromLibrary: (refs = null) =>
+    call(() => api.post("/iris-reporting/requirements/bulk-import", refs ? { refs } : {})),
+
   // ── Dry-run validate ──────────────────────────────────────────────────────
   validateRequirement: (payload, requirementId = null) =>
     call(() =>

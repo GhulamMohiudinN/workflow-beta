@@ -107,10 +107,10 @@
   display: flex; align-items: center; gap: 10px;
 }
 .landing-body .logo-mark {
-  width: 34px; height: 34px; background: var(--primary);
-  border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px;
+  border-radius: 7px; display: flex; align-items: center; justify-content: center; overflow: hidden;
 }
-.landing-body .logo-mark svg { color: white; }
+.landing-body .logo-mark img { width: 100%; height: 100%; object-fit: contain; }
 .landing-body .logo-name { font-size: 17px; font-weight: 800; color: var(--gray-900); letter-spacing: -0.3px; }
 .landing-body .nav-links { display: flex; align-items: center; gap: 32px; }
 .landing-body .nav-links a { font-size: 14px; font-weight: 500; color: var(--gray-600); transition: color 0.15s; }
@@ -529,9 +529,10 @@
 .landing-body .footer-brand p { font-size: 13px; line-height: 1.7; margin-top: 14px; max-width: 260px; }
 .landing-body .footer-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
 .landing-body .footer-logo-mark {
-  width: 30px; height: 30px; background: var(--primary);
-  border-radius: 7px; display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px;
+  border-radius: 7px; display: flex; align-items: center; justify-content: center; overflow: hidden;
 }
+.landing-body .footer-logo-mark img { width: 100%; height: 100%; object-fit: contain; }
 .landing-body .footer-logo-name { font-size: 15px; font-weight: 800; color: var(--white); }
 .landing-body .footer-col h4 { font-size: 12px; font-weight: 700; color: var(--white); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 18px; }
 .landing-body .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }

@@ -24,9 +24,7 @@ export default function Home() {
           <div className="nav-inner">
             <div className="logo">
               <div className="logo-mark">
-                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                </svg>
+                <img src="/logo.png" alt="IRIS Workspace" />
               </div>
               <span className="logo-name">IRIS Workspace</span>
             </div>
@@ -559,9 +557,7 @@ export default function Home() {
             <div className="footer-brand">
               <div className="footer-logo">
                 <div className="footer-logo-mark">
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                  </svg>
+                  <img src="/logo.png" alt="IRIS Workspace" />
                 </div>
                 <span className="footer-logo-name">IRIS Workspace</span>
               </div>

@@ -7,7 +7,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { loginSchema } from "../../formValidationScheme/authSchema";
 import authAPI from "../../api/auth";
 import toast, { Toaster } from "react-hot-toast";
-import { FiEye, FiEyeOff, FiLock, FiMail, FiShield, FiArrowLeft, FiBriefcase } from "react-icons/fi";
+import { FiEye, FiEyeOff, FiLock, FiMail, FiShield, FiArrowLeft } from "react-icons/fi";
 import AuthPanel from "../AuthPanel";
 
 export default function LoginPage() {
@@ -47,9 +47,7 @@ export default function LoginPage() {
 
           {/* Mobile logo */}
           <div className="lg:hidden flex justify-center mb-8">
-            <div className="bg-[var(--color-primary)] p-4 rounded-xl shadow-md">
-              <FiBriefcase className="w-10 h-10 text-white" />
-            </div>
+            <img src="/logo.png" alt="IRIS Workspace" className="h-16 w-16 rounded-[7px] object-contain shadow-md" />
           </div>
 
           {/* Back */}
@@ -62,9 +60,7 @@ export default function LoginPage() {
           {/* Heading */}
           <div className="text-center lg:text-left mb-8">
             <div className="flex items-center justify-center lg:justify-start gap-2 mb-2">
-              <div className="bg-blue-50 p-2 rounded-lg border border-blue-100">
-                <FiBriefcase className="h-5 w-5 text-[var(--color-primary)]" />
-              </div>
+              <img src="/logo.png" alt="IRIS Workspace" className="h-9 w-9 rounded-[7px] object-contain" />
               <h2 className="text-2xl font-black text-[var(--color-text)]">IRIS Workspace</h2>
             </div>
             <p className="text-sm text-[var(--color-muted)] font-medium">Enterprise Workflow Management Platform</p>

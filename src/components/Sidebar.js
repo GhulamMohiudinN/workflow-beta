@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FiDatabase, FiLogOut, FiX } from "react-icons/fi";
+import { FiLogOut, FiX } from "react-icons/fi";
 import { Badge } from "./Badge";
 import { Button } from "./Button";
 
@@ -62,9 +62,7 @@ export const Sidebar = ({
       >
         <div className="flex h-16 items-center justify-between border-b border-[var(--color-border)] px-4">
           <Link href="/dashboard" className="flex min-w-0 items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--color-primary)] text-white">
-              <FiDatabase size={18} />
-            </div>
+            <img src="/logo.png" alt="IRIS Workspace" className="h-9 w-9 shrink-0 rounded-[7px] object-contain" />
             <div className="min-w-0">
               <p className="truncate text-sm font-black text-[var(--color-text)]">
                 IRIS Workspace

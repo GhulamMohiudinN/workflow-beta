@@ -469,9 +469,7 @@ function CompanySetupContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="bg-[var(--color-primary)] p-2 rounded-lg">
-                <FiBriefcase className="h-5 w-5 text-white" />
-              </div>
+              <img src="/logo.png" alt="IRIS Workspace" className="h-9 w-9 rounded-[7px] object-contain" />
               <div>
                 <h1 className="text-lg font-black text-[var(--color-text)]">IRIS Workspace</h1>
                 <p className="text-xs text-[var(--color-muted)] font-medium">Company Setup</p>

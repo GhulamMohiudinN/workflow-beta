@@ -7,7 +7,7 @@ import { forgotPasswordSchema } from "../../formValidationScheme/authSchema";
 import { authAPI } from "../../api/auth";
 import Link from "next/link";
 import toast, { Toaster } from "react-hot-toast";
-import { FiMail, FiArrowLeft, FiBriefcase, FiShield, FiCheckCircle } from "react-icons/fi";
+import { FiMail, FiArrowLeft, FiShield, FiCheckCircle } from "react-icons/fi";
 
 export default function ForgotPasswordPage() {
   const [loading,        setLoading]        = useState(false);
@@ -40,9 +40,7 @@ export default function ForgotPasswordPage() {
         <div className="bg-white rounded-xl shadow-[var(--shadow-popover)] border border-[var(--color-border)] p-8">
           {/* Logo */}
           <div className="flex justify-center mb-6">
-            <div className="bg-[var(--color-primary)] p-3 rounded-xl shadow-md">
-              <FiBriefcase className="w-8 h-8 text-white" />
-            </div>
+            <img src="/logo.png" alt="IRIS Workspace" className="h-14 w-14 rounded-[7px] object-contain shadow-md" />
           </div>
 
           <div className="text-center mb-8">

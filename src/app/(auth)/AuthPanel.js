@@ -3,7 +3,7 @@
  * Shared right-side panel used by all auth pages.
  * Matches the blue design system (var(--color-primary)).
  */
-import { FiBriefcase, FiCheckCircle, FiUsers, FiLayers, FiShield, FiCpu } from "react-icons/fi";
+import { FiCheckCircle, FiUsers, FiLayers, FiShield, FiCpu } from "react-icons/fi";
 
 const BENEFITS = [
   { icon: FiCheckCircle, title: "Get Started in Minutes",   desc: "Set up your company workspace instantly" },
@@ -18,9 +18,7 @@ export default function AuthPanel({ subtitle = "Enterprise Workflow Platform" })
         <div className="max-w-sm w-full space-y-5">
           {/* Logo */}
           <div className="flex flex-col items-center space-y-3">
-            <div className="bg-[var(--color-primary)] p-3 rounded-xl shadow-lg">
-              <FiBriefcase className="w-10 h-10 text-white" />
-            </div>
+            <img src="/logo.png" alt="IRIS Workspace" className="h-16 w-16 rounded-[7px] object-contain shadow-lg" />
             <div className="text-center">
               <h1 className="text-2xl font-black text-[var(--color-text)]">IRIS Workspace</h1>
               <p className="text-[var(--color-primary)] font-semibold text-sm mt-1">{subtitle}</p>

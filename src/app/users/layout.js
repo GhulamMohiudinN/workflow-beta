@@ -7,7 +7,6 @@ import {
   FiHome, FiLayers, FiUser, FiLogOut, FiMenu, FiX, FiBell,
   FiGrid, FiChevronRight,
 } from "react-icons/fi";
-import { FiBriefcase } from "react-icons/fi";
 
 export default function UserLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -72,9 +71,7 @@ export default function UserLayout({ children }) {
         {/* Logo */}
         <div className="flex items-center justify-between h-16 px-5 border-b border-[var(--color-border)]">
           <div className="flex items-center gap-3">
-            <div className="bg-[var(--color-primary)] p-2 rounded-lg">
-              <FiBriefcase className="h-5 w-5 text-white" />
-            </div>
+            <img src="/logo.png" alt="IRIS Workspace" className="h-9 w-9 rounded-[7px] object-contain" />
             <span className="font-black text-[var(--color-text)]">IRIS Workspace</span>
           </div>
           <button
