@@ -55,3 +55,26 @@ textarea {
 .app-focus:focus-visible {
   outline-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
 }
+
+/* ─── Print-only area (used by IRIS Reporting's custom report export) ───────
+   Everything on the page is hidden when printing except the element with
+   this class — lets us reuse the browser's native "Save as PDF" without any
+   extra library or popup window. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .iris-print-area,
+  .iris-print-area * {
+    visibility: visible;
+  }
+  .iris-print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+  .iris-no-print {
+    display: none !important;
+  }
+}

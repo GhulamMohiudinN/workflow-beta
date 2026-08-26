@@ -871,6 +871,9 @@ export default function IrisReportingPage() {
   const [deleting,     setDeleting]     = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importing,       setImporting]       = useState(false);
+  const [reportSearch,    setReportSearch]    = useState("");
+  const [selectedReportIds, setSelectedReportIds] = useState(() => new Set());
+  const [showCustomReport, setShowCustomReport]   = useState(false);
 
   const PAGE_SIZE = 10;
 
@@ -901,6 +904,41 @@ export default function IrisReportingPage() {
   const pendingApprovals = useMemo(() =>
     requirements.filter((r) => r.approvalRequired && (!r.approvalStatus || r.approvalStatus === "pending")),
   [requirements]);
+
+  const reportFiltered = useMemo(() => {
+    const q = reportSearch.trim().toLowerCase();
+    if (!q) return requirements;
+    return requirements.filter((r) =>
+      (r.title || "").toLowerCase().includes(q) ||
+      (r.owner || "").toLowerCase().includes(q) ||
+      (r.legislationRef || "").toLowerCase().includes(q) ||
+      (r.source || "").toLowerCase().includes(q)
+    );
+  }, [requirements, reportSearch]);
+
+  const selectedReportItems = useMemo(
+    () => requirements.filter((r) => selectedReportIds.has(r._id)),
+    [requirements, selectedReportIds]
+  );
+
+  const toggleReportSelection = (id) => {
+    setSelectedReportIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllVisible = () => {
+    setSelectedReportIds((prev) => {
+      const allVisible = reportFiltered.every((r) => prev.has(r._id));
+      const next = new Set(prev);
+      if (allVisible) reportFiltered.forEach((r) => next.delete(r._id));
+      else reportFiltered.forEach((r) => next.add(r._id));
+      return next;
+    });
+  };
 
   const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -1407,20 +1445,59 @@ export default function IrisReportingPage() {
                 </div>
               </div>
 
+              {/* Search + selection bar */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="relative w-full sm:max-w-xs">
+                  <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+                  <input
+                    type="text"
+                    value={reportSearch}
+                    onChange={(e) => setReportSearch(e.target.value)}
+                    placeholder="Search obligations…"
+                    className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <p className="text-xs font-semibold text-slate-500">
+                    {selectedReportIds.size > 0 ? `${selectedReportIds.size} selected` : "Select obligations to build a custom report"}
+                  </p>
+                  <button
+                    type="button"
+                    disabled={selectedReportIds.size === 0}
+                    onClick={() => setShowCustomReport(true)}
+                    className="flex items-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-xs font-bold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-40 transition-colors">
+                    <FiFileText size={13} /> Generate Report
+                  </button>
+                </div>
+              </div>
+
               <div className="overflow-x-auto rounded-2xl border border-slate-200">
                 <table className="min-w-full divide-y divide-slate-200">
                   <thead className="bg-slate-50">
                     <tr>
+                      <th className="px-4 py-3 w-10">
+                        <input type="checkbox"
+                          checked={reportFiltered.length > 0 && reportFiltered.every((r) => selectedReportIds.has(r._id))}
+                          onChange={toggleSelectAllVisible}
+                          className="h-4 w-4 rounded border-slate-300 text-blue-700" />
+                      </th>
                       {["Obligation", "Source", "Owner", "Due Date", "Status", "Materiality", "Evidence Files"].map((h) => (
                         <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-white">
-                    {requirements.length === 0 ? (
-                      <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-slate-400">No obligations defined yet.</td></tr>
-                    ) : requirements.map((r) => (
-                      <tr key={r._id} className="hover:bg-slate-50 transition-colors">
+                    {reportFiltered.length === 0 ? (
+                      <tr><td colSpan={8} className="px-4 py-10 text-center text-sm text-slate-400">
+                        {reportSearch ? `No obligations matching "${reportSearch}"` : "No obligations defined yet."}
+                      </td></tr>
+                    ) : reportFiltered.map((r) => (
+                      <tr key={r._id} className={`transition-colors ${selectedReportIds.has(r._id) ? "bg-blue-50/60" : "hover:bg-slate-50"}`}>
+                        <td className="px-4 py-3">
+                          <input type="checkbox" checked={selectedReportIds.has(r._id)}
+                            onChange={() => toggleReportSelection(r._id)}
+                            className="h-4 w-4 rounded border-slate-300 text-blue-700" />
+                        </td>
                         <td className="px-4 py-3 max-w-[200px]">
                           <p className="text-sm font-black text-slate-900 truncate">{r.title}</p>
                           {r.legislationRef && <p className="text-[11px] font-mono text-slate-400 truncate">{r.legislationRef}</p>}
@@ -1468,6 +1545,138 @@ export default function IrisReportingPage() {
           onConfirm={confirmBulkImport}
         />
       )}
+
+      {showCustomReport && (
+        <CustomReportView items={selectedReportItems} onClose={() => setShowCustomReport(false)} />
+      )}
+    </div>
+  );
+}
+
+// ─── Custom Report — select-and-export view ────────────────────────────────────
+function CustomReportView({ items, onClose }) {
+  const workspaceName = useMemo(() => {
+    if (typeof window === "undefined") return "IRIS Workspace";
+    try {
+      const stored = JSON.parse(localStorage.getItem("workspace") || "null");
+      return stored?.name || stored?.companyName || "IRIS Workspace";
+    } catch {
+      return "IRIS Workspace";
+    }
+  }, []);
+
+  const generatedAt = new Date().toLocaleString("en-AU", {
+    day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+
+  return (
+    <div className="fixed inset-0 z-[200] overflow-y-auto bg-white">
+      {/* Toolbar — never printed */}
+      <div className="iris-no-print sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-slate-50 px-6 py-4">
+        <div>
+          <h2 className="text-base font-black text-slate-900">Custom Report</h2>
+          <p className="text-xs text-slate-500">{items.length} obligation{items.length !== 1 ? "s" : ""} selected</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => window.print()}
+            className="flex items-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-xs font-bold text-white hover:bg-blue-800 transition-colors">
+            <FiDownload size={13} /> Print / Save as PDF
+          </button>
+          <button type="button" onClick={onClose}
+            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+            <FiX size={13} /> Close
+          </button>
+        </div>
+      </div>
+
+      {/* Printable report body — only this prints, via the .iris-print-area rule in globals.css */}
+      <div className="iris-print-area mx-auto max-w-4xl px-8 py-10">
+        <div className="mb-8 border-b border-slate-200 pb-6">
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Compliance Obligation Report</p>
+          <h1 className="mt-1 text-2xl font-black text-slate-900">{workspaceName}</h1>
+          <p className="mt-2 text-xs text-slate-500">
+            Generated {generatedAt} · {items.length} obligation{items.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+
+        <div className="space-y-6">
+          {items.map((r, idx) => (
+            <div key={r._id} className="break-inside-avoid rounded-xl border border-slate-200 p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    {idx + 1}. {r.category || "Obligation"}
+                  </p>
+                  <h3 className="text-base font-black text-slate-900">{r.title}</h3>
+                  {r.legislationRef && (
+                    <p className="mt-0.5 text-xs font-mono text-slate-500">{r.legislationRef} — {r.source || "—"}</p>
+                  )}
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <StatusBadge status={r.status} />
+                  <MatBadge value={r.materiality} />
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div>
+                  <p className="text-[10px] font-bold uppercase text-slate-400">Owner</p>
+                  <p className="mt-0.5 text-xs font-semibold text-slate-700">{r.owner || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase text-slate-400">Due Date</p>
+                  <p className="mt-0.5 text-xs font-semibold text-slate-700">
+                    {r.dueDate ? new Date(r.dueDate).toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase text-slate-400">Reporting Period</p>
+                  <p className="mt-0.5 text-xs font-semibold text-slate-700">{r.reportingPeriod || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase text-slate-400">Approval</p>
+                  <p className="mt-0.5 text-xs font-semibold capitalize text-slate-700">
+                    {r.approvalRequired ? (r.approvalStatus || "pending").replace("_", " ") : "Not required"}
+                  </p>
+                </div>
+              </div>
+
+              {r.details && (
+                <div className="mt-4">
+                  <p className="text-[10px] font-bold uppercase text-slate-400">Details</p>
+                  <p className="mt-0.5 text-xs text-slate-600">{r.details}</p>
+                </div>
+              )}
+
+              {r.evidenceRequired?.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-[10px] font-bold uppercase text-slate-400">Evidence Required</p>
+                  <ul className="mt-1 list-inside list-disc text-xs text-slate-600">
+                    {r.evidenceRequired.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                </div>
+              )}
+
+              <div className="mt-4">
+                <p className="text-[10px] font-bold uppercase text-slate-400">
+                  Evidence Files ({r.evidenceFiles?.length || 0})
+                </p>
+                {r.evidenceFiles?.length > 0 ? (
+                  <ul className="mt-1 text-xs text-slate-600">
+                    {r.evidenceFiles.map((f) => <li key={f._id}>{f.fileName}</li>)}
+                  </ul>
+                ) : (
+                  <p className="mt-1 text-xs italic text-slate-400">No files attached</p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-10 border-t border-slate-200 pt-4 text-center text-[10px] text-slate-400">
+          Generated from {workspaceName} — for internal board and third-party review purposes.
+        </div>
+      </div>
     </div>
   );
 }
