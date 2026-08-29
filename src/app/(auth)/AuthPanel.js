@@ -18,9 +18,10 @@ export default function AuthPanel({ subtitle = "Enterprise Workflow Platform" })
         <div className="max-w-sm w-full space-y-5">
           {/* Logo */}
           <div className="flex flex-col items-center space-y-3">
-            <img src="/logo.png" alt="IRIS Workspace" className="h-16 w-16 rounded-[7px] object-contain shadow-lg" />
+            <img src="/logo.png" alt="Iris Monde" className="h-16 w-16 rounded-[7px] object-contain shadow-lg" />
             <div className="text-center">
-              <h1 className="text-2xl font-black text-[var(--color-text)]">IRIS Workspace</h1>
+              <h1 className="text-2xl font-black text-[var(--color-text)]">Iris Monde</h1>
+              <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)]">Workspace</p>
               <p className="text-[var(--color-primary)] font-semibold text-sm mt-1">{subtitle}</p>
             </div>
           </div>

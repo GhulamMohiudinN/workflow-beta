@@ -10,6 +10,7 @@ import {
 import toast, { Toaster } from "react-hot-toast";
 import { irisReportingAPI } from "../../api/irisReportingAPI";
 import { userAPI } from "../../api/userAPI";
+import { reportTemplateAPI } from "../../api/reportTemplateAPI";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const TABS = ["Dashboard", "Obligations", "Approvals", "Report Pack"];
@@ -874,6 +875,12 @@ export default function IrisReportingPage() {
   const [reportSearch,    setReportSearch]    = useState("");
   const [selectedReportIds, setSelectedReportIds] = useState(() => new Set());
   const [showCustomReport, setShowCustomReport]   = useState(false);
+  const [templates,        setTemplates]        = useState([]);
+  const [uploadingTemplate, setUploadingTemplate] = useState(false);
+  const [generatingTemplateId, setGeneratingTemplateId] = useState(null);
+  const [previewData, setPreviewData] = useState(null); // result of generateFromTemplate, shown in TemplatePreviewModal
+  const [deleteTemplateTarget, setDeleteTemplateTarget] = useState(null);
+  const [deletingTemplate, setDeletingTemplate] = useState(false);
 
   const PAGE_SIZE = 10;
 
@@ -882,7 +889,11 @@ export default function IrisReportingPage() {
 
   const filtered = useMemo(() => {
     let list = requirements;
-    if (filterStatus !== "all") list = list.filter((r) => r.status === filterStatus);
+    if (filterStatus === "overdue") {
+      list = list.filter((r) => r.dueDate && new Date(r.dueDate) < new Date() && r.status !== "completed");
+    } else if (filterStatus !== "all") {
+      list = list.filter((r) => r.status === filterStatus);
+    }
     const q = searchQuery.trim().toLowerCase();
     if (q) {
       list = list.filter((r) =>
@@ -945,11 +956,12 @@ export default function IrisReportingPage() {
     else setRefreshing(true);
     setError(null);
 
-    // Fetch overview, legislation library, and workspace members in parallel
-    const [overviewRes, libRes, membersRes] = await Promise.all([
+    // Fetch overview, legislation library, workspace members, and report templates in parallel
+    const [overviewRes, libRes, membersRes, templatesRes] = await Promise.all([
       irisReportingAPI.getOverview(),
       irisReportingAPI.getLegislationLibrary(),
       userAPI.getWorkspaceUsers({ limit: 100 }),
+      reportTemplateAPI.listTemplates(),
     ]);
 
     if (overviewRes.success) setData(overviewRes.data);
@@ -960,12 +972,47 @@ export default function IrisReportingPage() {
     }
 
     if (membersRes.success) setMembers(membersRes.users);
+    if (templatesRes.success) setTemplates(templatesRes.templates);
 
     setLoading(false);
     setRefreshing(false);
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // ── Deep-link support for the AI assistant (?tab=&filter=&search=) ─────────
+  // Read once on mount — plain window.location, not useSearchParams, so this
+  // page (already fully client-rendered) doesn't need a Suspense boundary.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+    const filter = params.get("filter");
+    const search = params.get("search");
+    if (tab) setActiveTab(tab.replace(/\+/g, " "));
+    if (filter) setFilterStatus(filter);
+    if (search) setSearchQuery(search);
+  }, []);
+
+  // ── Deep-link "generate a report" request (?autoSelect=) — needs the
+  // obligations loaded first, so this waits on `requirements` and clears the
+  // URL param once handled so it doesn't re-trigger on later refreshes ──────
+  useEffect(() => {
+    if (typeof window === "undefined" || !requirements.length) return;
+    const params = new URLSearchParams(window.location.search);
+    const autoSelect = params.get("autoSelect");
+    if (!autoSelect) return;
+
+    const matches =
+      autoSelect === "all" ? requirements :
+      autoSelect === "overdue" ? requirements.filter((r) => r.dueDate && new Date(r.dueDate) < new Date() && r.status !== "completed") :
+      requirements.filter((r) => r.status === autoSelect);
+
+    setActiveTab("Report Pack");
+    setSelectedReportIds(new Set(matches.map((r) => r._id)));
+    setShowCustomReport(true);
+    window.history.replaceState({}, "", window.location.pathname);
+  }, [requirements]);
 
   const resetForm = () => { setForm(EMPTY_FORM); setEditId(null); setShowForm(false); setPendingFiles([]); setRuleWarnings([]); };
 
@@ -1065,6 +1112,52 @@ export default function IrisReportingPage() {
     }
     setImporting(false);
     setShowImportModal(false);
+  };
+
+  const handleUploadTemplate = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!/\.(docx|xlsx)$/i.test(file.name)) {
+      toast.error("Only .docx and .xlsx templates are supported");
+      return;
+    }
+    setUploadingTemplate(true);
+    const res = await reportTemplateAPI.uploadTemplate(file);
+    if (res.success) {
+      toast.success(`"${file.name}" uploaded`);
+      await loadData(true);
+    } else {
+      toast.error(res.error || "Failed to upload template");
+    }
+    setUploadingTemplate(false);
+  };
+
+  const handleDeleteTemplate = (templateId, name) => setDeleteTemplateTarget({ _id: templateId, name });
+
+  const confirmDeleteTemplate = async () => {
+    if (!deleteTemplateTarget) return;
+    setDeletingTemplate(true);
+    const res = await reportTemplateAPI.deleteTemplate(deleteTemplateTarget._id);
+    if (res.success) { toast.success("Template deleted"); await loadData(true); }
+    else toast.error(res.error || "Failed to delete template");
+    setDeletingTemplate(false);
+    setDeleteTemplateTarget(null);
+  };
+
+  const handleGenerateFromTemplate = async (template) => {
+    if (selectedReportIds.size === 0) {
+      toast.error("Select at least one obligation first (checkboxes above)");
+      return;
+    }
+    setGeneratingTemplateId(template._id);
+    const res = await reportTemplateAPI.generateFromTemplate(template._id, Array.from(selectedReportIds));
+    if (res.success) {
+      setPreviewData(res);
+    } else {
+      toast.error(res.error || "Failed to generate report from template");
+    }
+    setGeneratingTemplateId(null);
   };
 
   const handleUpload = async (reqId, file) => {
@@ -1290,7 +1383,7 @@ export default function IrisReportingPage() {
               {/* Filter bar */}
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
-                  {["all", "planned", "in_progress", "completed", "blocked"].map((s) => (
+                  {["all", "planned", "in_progress", "completed", "blocked", "overdue"].map((s) => (
                     <button key={s} onClick={() => { setFilterStatus(s); setPage(1); }}
                       className={`rounded-md px-3 py-1.5 text-xs font-bold transition-colors ${
                         filterStatus === s ? "bg-blue-700 text-white" : "text-slate-500 hover:text-slate-900"
@@ -1471,6 +1564,61 @@ export default function IrisReportingPage() {
                 </div>
               </div>
 
+              {/* ── Custom Templates — upload your own .docx/.xlsx, we fill in what we can ── */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-black text-slate-900">Your Report Templates</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Upload your own Word or Excel template — we auto-fill what we track (title, owner, due date, status,
+                      legislation reference, evidence) and leave the rest for you to fill in.
+                    </p>
+                  </div>
+                  <label className="flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+                    {uploadingTemplate ? (
+                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+                    ) : (
+                      <FiUploadCloud size={13} />
+                    )}
+                    Upload Template
+                    <input type="file" accept=".docx,.xlsx" className="hidden" onChange={handleUploadTemplate} disabled={uploadingTemplate} />
+                  </label>
+                </div>
+
+                {templates.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    {templates.map((t) => (
+                      <div key={t._id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <FiFileText size={14} className="shrink-0 text-slate-400" />
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-bold text-slate-800">{t.name}</p>
+                            <p className="text-[10px] uppercase text-slate-400">{t.fileType} · uploaded by {t.uploadedBy || "—"}</p>
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <button type="button" onClick={() => handleGenerateFromTemplate(t)}
+                            disabled={generatingTemplateId === t._id || selectedReportIds.size === 0}
+                            title={selectedReportIds.size === 0 ? "Select obligations below first" : "Generate from this template"}
+                            className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-[11px] font-bold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40 transition-colors">
+                            {generatingTemplateId === t._id ? (
+                              <span className="h-3 w-3 animate-spin rounded-full border-2 border-blue-300 border-t-blue-700" />
+                            ) : (
+                              <FiDownload size={11} />
+                            )}
+                            Generate
+                          </button>
+                          <button type="button" onClick={() => handleDeleteTemplate(t._id, t.name)}
+                            className="rounded-lg border border-red-100 bg-white p-1.5 text-red-400 hover:border-red-300 hover:bg-red-50 hover:text-red-600 transition-colors">
+                            <FiTrash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="overflow-x-auto rounded-2xl border border-slate-200">
                 <table className="min-w-full divide-y divide-slate-200">
                   <thead className="bg-slate-50">
@@ -1529,11 +1677,22 @@ export default function IrisReportingPage() {
       </div>
 
       {deleteTarget && (
-        <DeleteObligationModal
+        <DeleteConfirmModal
+          itemLabel="Obligation"
           title={deleteTarget.title}
           loading={deleting}
           onClose={() => !deleting && setDeleteTarget(null)}
           onConfirm={confirmDelete}
+        />
+      )}
+
+      {deleteTemplateTarget && (
+        <DeleteConfirmModal
+          itemLabel="Template"
+          title={deleteTemplateTarget.name}
+          loading={deletingTemplate}
+          onClose={() => !deletingTemplate && setDeleteTemplateTarget(null)}
+          onConfirm={confirmDeleteTemplate}
         />
       )}
 
@@ -1549,6 +1708,10 @@ export default function IrisReportingPage() {
       {showCustomReport && (
         <CustomReportView items={selectedReportItems} onClose={() => setShowCustomReport(false)} />
       )}
+
+      {previewData && (
+        <TemplatePreviewModal data={previewData} onClose={() => setPreviewData(null)} />
+      )}
     </div>
   );
 }
@@ -1556,12 +1719,12 @@ export default function IrisReportingPage() {
 // ─── Custom Report — select-and-export view ────────────────────────────────────
 function CustomReportView({ items, onClose }) {
   const workspaceName = useMemo(() => {
-    if (typeof window === "undefined") return "IRIS Workspace";
+    if (typeof window === "undefined") return "Iris Monde Workspace";
     try {
       const stored = JSON.parse(localStorage.getItem("workspace") || "null");
-      return stored?.name || stored?.companyName || "IRIS Workspace";
+      return stored?.name || stored?.companyName || "Iris Monde Workspace";
     } catch {
-      return "IRIS Workspace";
+      return "Iris Monde Workspace";
     }
   }, []);
 
@@ -1681,6 +1844,122 @@ function CustomReportView({ items, onClose }) {
   );
 }
 
+// ─── Template Preview — editable table for xlsx, read-only preview for docx ───
+function TemplatePreviewModal({ data, onClose }) {
+  const isXlsx = data.fileType === "xlsx";
+  const [sheets, setSheets] = useState(() =>
+    isXlsx ? data.sheets.map((s) => ({ ...s, rows: s.rows.map((r) => [...r]) })) : []
+  );
+  const [activeSheet, setActiveSheet] = useState(0);
+  const [downloading, setDownloading] = useState(false);
+
+  const updateCell = (sheetIdx, rowIdx, colIdx, value) => {
+    setSheets((prev) => {
+      const next = [...prev];
+      const rows = next[sheetIdx].rows.map((r) => [...r]);
+      while (rows[rowIdx].length <= colIdx) rows[rowIdx].push("");
+      rows[rowIdx][colIdx] = value;
+      next[sheetIdx] = { ...next[sheetIdx], rows };
+      return next;
+    });
+  };
+
+  const downloadBlob = (blob, fileName) => {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadXlsx = async () => {
+    setDownloading(true);
+    const res = await reportTemplateAPI.finalizeXlsx(data.fileName, sheets);
+    if (res.success) { downloadBlob(res.blob, data.fileName); toast.success("Downloaded"); }
+    else toast.error(res.error || "Failed to download");
+    setDownloading(false);
+  };
+
+  const handleDownloadDocx = () => {
+    const byteChars = atob(data.fileBase64);
+    const byteNumbers = new Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+    downloadBlob(new Blob([new Uint8Array(byteNumbers)], { type: data.mimeType }), data.fileName);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-950/50 p-4">
+      <div className="flex h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <div>
+            <p className="text-sm font-black text-slate-900">{data.fileName}</p>
+            <p className="text-xs text-slate-500">
+              {isXlsx ? "Review and edit any cell below before downloading" : "Preview only — edit in Word after downloading"}
+            </p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+            <FiX size={18} />
+          </button>
+        </div>
+
+        {isXlsx && sheets.length > 1 && (
+          <div className="flex gap-1 border-b border-slate-200 bg-slate-50 px-3 pt-2">
+            {sheets.map((s, i) => (
+              <button key={i} type="button" onClick={() => setActiveSheet(i)}
+                className={`rounded-t-lg border border-b-0 px-3 py-1.5 text-xs font-bold transition-colors ${
+                  activeSheet === i ? "border-slate-200 bg-white text-blue-700" : "border-transparent text-slate-500 hover:text-slate-700"
+                }`}>
+                {s.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="flex-1 overflow-auto p-5">
+          {isXlsx ? (
+            <table className="border-collapse text-xs">
+              <tbody>
+                {sheets[activeSheet]?.rows.map((row, rowIdx) => (
+                  <tr key={rowIdx}>
+                    {row.map((cell, colIdx) => (
+                      <td key={colIdx} className="border border-slate-200 p-0">
+                        <input
+                          value={cell}
+                          onChange={(e) => updateCell(activeSheet, rowIdx, colIdx, e.target.value)}
+                          className="w-32 border-0 px-2 py-1.5 text-xs outline-none focus:bg-blue-50"
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div
+              className="text-sm text-slate-700 [&_h1]:mb-3 [&_h1]:text-xl [&_h1]:font-black [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-bold [&_li]:mb-1 [&_p]:mb-3 [&_strong]:font-bold [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-slate-200 [&_td]:p-2 [&_th]:border [&_th]:border-slate-200 [&_th]:bg-slate-50 [&_th]:p-2 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5"
+              dangerouslySetInnerHTML={{ __html: data.previewHtml }}
+            />
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-5 py-4">
+          <button type="button" onClick={onClose}
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+            Cancel
+          </button>
+          <button type="button" onClick={isXlsx ? handleDownloadXlsx : handleDownloadDocx} disabled={downloading}
+            className="flex items-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-sm font-bold text-white hover:bg-blue-800 disabled:opacity-50 transition-colors">
+            <FiDownload size={14} /> {downloading ? "Preparing…" : "Download"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Import-from-Library Confirmation Modal ────────────────────────────────────
 function ImportLibraryModal({ count, loading, onClose, onConfirm }) {
   return (
@@ -1730,7 +2009,7 @@ function ImportLibraryModal({ count, loading, onClose, onConfirm }) {
 }
 
 // ─── Delete Confirmation Modal ─────────────────────────────────────────────────
-function DeleteObligationModal({ title, loading, onClose, onConfirm }) {
+function DeleteConfirmModal({ itemLabel = "Item", title, loading, onClose, onConfirm }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
@@ -1743,10 +2022,10 @@ function DeleteObligationModal({ title, loading, onClose, onConfirm }) {
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-red-50 text-red-600">
           <FiAlertCircle className="h-7 w-7" />
         </div>
-        <h2 className="text-xl font-black text-slate-950">Delete Obligation?</h2>
+        <h2 className="text-xl font-black text-slate-950">Delete {itemLabel}?</h2>
         <p className="mx-auto mt-2 max-w-sm text-sm font-medium text-slate-600">
           Are you sure you want to delete{" "}
-          <span className="font-bold text-slate-950">{title || "this obligation"}</span>?
+          <span className="font-bold text-slate-950">{title || `this ${itemLabel.toLowerCase()}`}</span>?
           This action cannot be undone.
         </p>
         <div className="mt-6 flex gap-3">

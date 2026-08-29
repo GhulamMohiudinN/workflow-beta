@@ -47,7 +47,7 @@ export default function LoginPage() {
 
           {/* Mobile logo */}
           <div className="lg:hidden flex justify-center mb-8">
-            <img src="/logo.png" alt="IRIS Workspace" className="h-16 w-16 rounded-[7px] object-contain shadow-md" />
+            <img src="/logo.png" alt="Iris Monde Workspace" className="h-16 w-16 rounded-[7px] object-contain shadow-md" />
           </div>
 
           {/* Back */}
@@ -60,8 +60,11 @@ export default function LoginPage() {
           {/* Heading */}
           <div className="text-center lg:text-left mb-8">
             <div className="flex items-center justify-center lg:justify-start gap-2 mb-2">
-              <img src="/logo.png" alt="IRIS Workspace" className="h-9 w-9 rounded-[7px] object-contain" />
-              <h2 className="text-2xl font-black text-[var(--color-text)]">IRIS Workspace</h2>
+              <img src="/logo.png" alt="Iris Monde" className="h-9 w-9 rounded-[7px] object-contain" />
+              <div>
+                <h2 className="text-2xl font-black text-[var(--color-text)] leading-tight">Iris Monde</h2>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)] leading-tight">Workspace</p>
+              </div>
             </div>
             <p className="text-sm text-[var(--color-muted)] font-medium">Enterprise Workflow Management Platform</p>
           </div>
@@ -114,7 +117,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full flex justify-center items-center py-3 px-4 rounded-lg text-sm font-black text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
             >
-              {loading ? (<><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />Signing in...</>) : "Access IRIS Workspace"}
+              {loading ? (<><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />Signing in...</>) : "Access Iris Monde Workspace"}
             </button>
 
             {error && <p className="text-red-500 text-sm text-center font-medium">{error}</p>}

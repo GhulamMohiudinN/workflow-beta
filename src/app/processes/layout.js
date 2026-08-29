@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { CiViewList } from "react-icons/ci";
 import { CgOrganisation } from "react-icons/cg";
-import { FiGrid, FiSettings, FiUsers } from "react-icons/fi";
+import { FiGrid, FiSettings, FiUsers, FiShield, FiDollarSign } from "react-icons/fi";
 import { LuChartNoAxesCombined } from "react-icons/lu";
 import { MdOutlineDashboardCustomize } from "react-icons/md";
 import { PiNetworkThin } from "react-icons/pi";
@@ -13,6 +13,7 @@ import { socket } from "../utils/socket";
 import Footer from "../../components/Footer";
 import Header from "../../components/Header";
 import Sidebar from "../../components/Sidebar";
+import AIAssistant from "../../components/AIAssistant";
 
 export const dynamic = "force-dynamic";
 
@@ -85,11 +86,26 @@ export default function ProcessesLayout({ children }) {
       },
       {
         name: "Reports",
-        href: "/dashboard",
+        href: "/reports",
         icon: LuChartNoAxesCombined,
-        current: false,
+        current: pathname.includes("/reports"),
+      },
+      {
+        name: "IRIS Reporting",
+        href: "/iris-reporting",
+        icon: FiShield,
+        current: pathname.includes("/iris-reporting"),
       },
     );
+
+    if (role === "admin") {
+      items.push({
+        name: "Invoicing",
+        href: "/invoicing",
+        icon: FiDollarSign,
+        current: pathname.includes("/invoicing"),
+      });
+    }
 
     return items;
   }, [pathname, role]);
@@ -184,6 +200,7 @@ export default function ProcessesLayout({ children }) {
 
         <Footer />
       </div>
+      <AIAssistant />
     </div>
   );
 }

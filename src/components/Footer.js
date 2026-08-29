@@ -1,5 +1,5 @@
 export const Footer = ({
-  copyrightText = "IRIS Workspace",
+  copyrightText = "Iris Monde Workspace",
   year = new Date().getFullYear(),
 }) => {
   return (

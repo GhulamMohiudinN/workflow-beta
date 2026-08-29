@@ -7,6 +7,7 @@ import api from "../api/axios";
 import {
   FiBarChart2,
   FiBriefcase,
+  FiDollarSign,
   FiGitBranch,
   FiGrid,
   FiLayout,
@@ -26,6 +27,7 @@ import { LuChartNoAxesCombined } from "react-icons/lu";
 import Header from "../../components/Header";
 import Sidebar from "../../components/Sidebar";
 import Footer from "../../components/Footer";
+import AIAssistant from "../../components/AIAssistant";
 
 export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -105,6 +107,15 @@ export default function DashboardLayout({ children }) {
       icon: FiShield,
       current: pathname.includes("/iris-reporting"),
     });
+
+    if (role === "admin") {
+      items.push({
+        name: "Invoicing",
+        href: "/invoicing",
+        icon: FiDollarSign,
+        current: pathname.includes("/invoicing"),
+      });
+    }
 
     return items;
   }, [pathname, role]);
@@ -209,6 +220,7 @@ export default function DashboardLayout({ children }) {
 
         <Footer />
       </div>
+      <AIAssistant />
     </div>
   );
 }

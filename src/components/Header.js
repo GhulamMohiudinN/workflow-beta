@@ -107,7 +107,7 @@ export const Header = ({
                   {displayName}
                 </p>
                 <p className="text-[10px] font-medium text-[var(--color-muted)]">
-                  {workspace?.name || "IRIS Workspace"}
+                  {workspace?.name || "Iris Monde Workspace"}
                 </p>
               </div>
               <Avatar src={user?.profilePicture} name={displayName} size="sm" />
@@ -119,7 +119,7 @@ export const Header = ({
                 <div className="border-b border-[var(--color-border)] px-4 py-3">
                   <p className="truncate text-sm font-bold">{displayName}</p>
                   <p className="truncate text-xs text-[var(--color-muted)]">
-                    {user?.email || user?.role || "IRIS Workspace user"}
+                    {user?.email || user?.role || "Iris Monde Workspace user"}
                   </p>
                 </div>
                 <button className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]">

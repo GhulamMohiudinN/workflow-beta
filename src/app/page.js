@@ -24,9 +24,9 @@ export default function Home() {
           <div className="nav-inner">
             <div className="logo">
               <div className="logo-mark">
-                <img src="/logo.png" alt="IRIS Workspace" />
+                <img src="/logo.png" alt="Iris Monde" />
               </div>
-              <span className="logo-name">IRIS Workspace</span>
+              <span className="logo-name">Iris Monde</span>
             </div>
             <div className="nav-links">
               <a href="#how-it-works">How it works</a>
@@ -66,11 +66,11 @@ export default function Home() {
                 Build, assign,<br/>and track your<br/><em>business processes</em>
               </h1>
               <p className="hero-sub">
-                Create structured workflows, assign each step to the right team member, and track progress in real time — all inside your company&apos;s private IRIS Workspace.
+                Create structured workflows, assign each step to the right team member, and track progress in real time — all inside your company&apos;s private Iris Monde Workspace.
               </p>
               <div className="hero-actions">
                 <button onClick={handleGetStarted} className="btn-primary">
-                  Create your IRIS Workspace
+                  Create your Iris Monde Workspace
                   <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
                   </svg>
@@ -174,7 +174,7 @@ export default function Home() {
             </div>
             <div className="trust-item">
               <div className="trust-icon">👥</div>
-              Multi-tenant IRIS Workspaces
+              Multi-tenant Iris Monde Workspaces
             </div>
             <div className="trust-item">
               <div className="trust-icon">⚡</div>
@@ -197,8 +197,8 @@ export default function Home() {
         <div className="container">
           <div className="section-header">
             <span className="section-label">How it works</span>
-            <h2>Your IRIS Workspace, up and running<br/>in four steps</h2>
-            <p>IRIS Workspace is built around the way real teams actually operate — not an abstract project board, but a structured process system with clear ownership.</p>
+            <h2>Your Iris Monde Workspace, up and running<br/>in four steps</h2>
+            <p>Iris Monde Workspace is built around the way real teams actually operate — not an abstract project board, but a structured process system with clear ownership.</p>
           </div>
           <div className="steps-grid">
             <div className="step-card">
@@ -208,8 +208,8 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                 </svg>
               </div>
-              <h3>Create your company IRIS Workspace</h3>
-              <p>Register your company, set up your profile, and get a fully isolated IRIS Workspace that belongs only to your organisation.</p>
+              <h3>Create your company Iris Monde Workspace</h3>
+              <p>Register your company, set up your profile, and get a fully isolated Iris Monde Workspace that belongs only to your organisation.</p>
             </div>
             <div className="step-card">
               <div className="step-number">02</div>
@@ -219,7 +219,7 @@ export default function Home() {
                 </svg>
               </div>
               <h3>Invite your team members</h3>
-              <p>Add your team by email. Each member gets their own account, sees only what&apos;s assigned to them, and stays connected to your IRIS Workspace.</p>
+              <p>Add your team by email. Each member gets their own account, sees only what&apos;s assigned to them, and stays connected to your Iris Monde Workspace.</p>
             </div>
             <div className="step-card">
               <div className="step-number">03</div>
@@ -384,8 +384,8 @@ export default function Home() {
               </div>
               <div className="feature-content">
                 <span className="section-label">Team Management</span>
-                <h2>Your whole team, in one IRIS Workspace</h2>
-                <p>Invite team members, manage their access, and see exactly what everyone is working on — all from a single dashboard. Every user belongs to your company&apos;s isolated IRIS Workspace.</p>
+                <h2>Your whole team, in one Iris Monde Workspace</h2>
+                <p>Invite team members, manage their access, and see exactly what everyone is working on — all from a single dashboard. Every user belongs to your company&apos;s isolated Iris Monde Workspace.</p>
                 <ul className="feature-list">
                   <li>
                     <div className="feature-list-icon">
@@ -426,11 +426,11 @@ export default function Home() {
           <div className="stats-inner">
             <div className="stats-label">Built for real operational work</div>
             <h2 className="stats-heading">Everything your processes need.<br/>Nothing they don&apos;t.</h2>
-            <p className="stats-sub">IRIS Workspace is designed around one idea: structured work, clearly owned, reliably tracked.</p>
+            <p className="stats-sub">Iris Monde Workspace is designed around one idea: structured work, clearly owned, reliably tracked.</p>
             <div className="stats-grid">
               <div className="stat-item">
                 <div className="stat-number"><span>∞</span></div>
-                <div className="stat-desc">Processes per IRIS Workspace — build as many as your operation requires</div>
+                <div className="stat-desc">Processes per Iris Monde Workspace — build as many as your operation requires</div>
               </div>
               <div className="stat-item">
                 <div className="stat-number">100<span>%</span></div>
@@ -557,9 +557,9 @@ export default function Home() {
             <div className="footer-brand">
               <div className="footer-logo">
                 <div className="footer-logo-mark">
-                  <img src="/logo.png" alt="IRIS Workspace" />
+                  <img src="/logo.png" alt="Iris Monde" />
                 </div>
-                <span className="footer-logo-name">IRIS Workspace</span>
+                <span className="footer-logo-name">Iris Monde</span>
               </div>
               <p>Enterprise workflow management platform powered by MongoDB.</p>
             </div>
@@ -591,7 +591,7 @@ export default function Home() {
             </div>
           </div>
           <div className="footer-bottom">
-            <p>© {new Date().getFullYear()} IRIS Workspace. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Iris Monde Workspace. All rights reserved.</p>
             <p>Built with MongoDB · Enterprise-ready · SOC 2 Type II Certified</p>
           </div>
         </div>

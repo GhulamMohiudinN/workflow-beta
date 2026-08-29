@@ -7,6 +7,7 @@ import {
   FiHome, FiLayers, FiUser, FiLogOut, FiMenu, FiX, FiBell,
   FiGrid, FiChevronRight,
 } from "react-icons/fi";
+import AIAssistant from "../../components/AIAssistant";
 
 export default function UserLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -71,8 +72,11 @@ export default function UserLayout({ children }) {
         {/* Logo */}
         <div className="flex items-center justify-between h-16 px-5 border-b border-[var(--color-border)]">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="IRIS Workspace" className="h-9 w-9 rounded-[7px] object-contain" />
-            <span className="font-black text-[var(--color-text)]">IRIS Workspace</span>
+            <img src="/logo.png" alt="Iris Monde" className="h-9 w-9 rounded-[7px] object-contain" />
+            <div>
+              <p className="font-black text-[var(--color-text)] leading-tight">Iris Monde</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)] leading-tight">Workspace</p>
+            </div>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -174,6 +178,7 @@ export default function UserLayout({ children }) {
           {children}
         </main>
       </div>
+      <AIAssistant />
     </div>
   );
 }

@@ -62,13 +62,13 @@ export const Sidebar = ({
       >
         <div className="flex h-16 items-center justify-between border-b border-[var(--color-border)] px-4">
           <Link href="/dashboard" className="flex min-w-0 items-center gap-3">
-            <img src="/logo.png" alt="IRIS Workspace" className="h-9 w-9 shrink-0 rounded-[7px] object-contain" />
+            <img src="/logo.png" alt="Iris Monde" className="h-9 w-9 shrink-0 rounded-[7px] object-contain" />
             <div className="min-w-0">
               <p className="truncate text-sm font-black text-[var(--color-text)]">
-                IRIS Workspace
+                Iris Monde
               </p>
               <p className="truncate text-[10px] font-semibold uppercase text-[var(--color-muted)]">
-                {workspace?.name || "IRIS Workspace"}
+                {workspace?.name || "Workspace"}
               </p>
             </div>
           </Link>

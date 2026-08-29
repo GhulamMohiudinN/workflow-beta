@@ -380,7 +380,7 @@ export default function CompanyPage() {
         <div>
           <h1 className="text-2xl font-black text-[var(--color-text)]">Company Profile</h1>
           <p className="mt-1 text-sm font-medium text-[var(--color-muted)]">
-            {isEditing ? "Edit your company information" : "View and manage your IRIS Workspace settings"}
+            {isEditing ? "Edit your company information" : "View and manage your Iris Monde Workspace settings"}
           </p>
         </div>
         <div className="flex gap-3">
@@ -520,7 +520,7 @@ export default function CompanyPage() {
             <div className="space-y-5">
               <div>
                 <h3 className="text-sm font-black text-[var(--color-text)] mb-1">Notification Channels</h3>
-                <p className="text-xs font-medium text-[var(--color-muted)] mb-5">Choose how you would like to receive IRIS Workspace notifications.</p>
+                <p className="text-xs font-medium text-[var(--color-muted)] mb-5">Choose how you would like to receive Iris Monde Workspace notifications.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {Object.entries(company.notificationPreferences).map(([channel, enabled]) => (
                     <div key={channel} className={`border-2 rounded-lg p-4 transition-all ${enabled ? "border-[var(--color-primary)] bg-blue-50/40" : "border-[var(--color-border)] bg-white"}`}>
@@ -554,7 +554,7 @@ export default function CompanyPage() {
               <div className="flex items-start gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-soft)] p-4">
                 <FiAlertCircle className="h-4 w-4 text-[var(--color-primary)] shrink-0 mt-0.5" />
                 <p className="text-xs font-medium text-[var(--color-muted)]">
-                  These notification preferences apply IRIS Workspace-wide. Individual settings can be configured in your user profile.
+                  These notification preferences apply Iris Monde Workspace-wide. Individual settings can be configured in your user profile.
                 </p>
               </div>
             </div>

@@ -293,7 +293,7 @@ function CompanySetupContent() {
           const data = await authAPI.verifyEmail(token);
           toast.success(
             data?.message ||
-              "Email verified successfully! Please complete your IRIS Workspace setup.",
+              "Email verified successfully! Please complete your Iris Monde Workspace setup.",
           );
           setVerificationError(null);
           setVerifying(false);
@@ -403,7 +403,7 @@ function CompanySetupContent() {
           console.log("Workspace creation response:", response);
 
           setLoading(false);
-          toast.success("IRIS Workspace created successfully!");
+          toast.success("Iris Monde Workspace created successfully!");
           router.push("/login");
 
         } catch (err) {
@@ -411,7 +411,7 @@ function CompanySetupContent() {
           console.error("Error creating workspace:", err);
           console.error("Error details:", err.response?.data || err.message);
 
-          const errorMessage = err.response?.data?.message || "Failed to create IRIS Workspace. Please try again.";
+          const errorMessage = err.response?.data?.message || "Failed to create Iris Monde Workspace. Please try again.";
           toast.error(errorMessage);
         }
       }
@@ -469,10 +469,10 @@ function CompanySetupContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src="/logo.png" alt="IRIS Workspace" className="h-9 w-9 rounded-[7px] object-contain" />
+              <img src="/logo.png" alt="Iris Monde" className="h-9 w-9 rounded-[7px] object-contain" />
               <div>
-                <h1 className="text-lg font-black text-[var(--color-text)]">IRIS Workspace</h1>
-                <p className="text-xs text-[var(--color-muted)] font-medium">Company Setup</p>
+                <h1 className="text-lg font-black text-[var(--color-text)] leading-tight">Iris Monde</h1>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)] leading-tight">Workspace · Company Setup</p>
               </div>
             </div>
             <div className="text-sm font-semibold text-[var(--color-muted)]">Step {currentStep} of {totalSteps}</div>
@@ -1066,7 +1066,7 @@ function CompanySetupContent() {
             Your data is securely stored with enterprise encryption.
           </p>
           <p className="mt-2 text-xs text-gray-400">
-            IRIS Workspace • Enterprise Workflow Management Platform
+            Iris Monde Workspace • Enterprise Workflow Management Platform
           </p>
         </div>
       </footer>

@@ -74,7 +74,7 @@ export default function ResetPasswordClient() {
 
           {/* Logo */}
           <div className="flex justify-center mb-6">
-            <img src="/logo.png" alt="IRIS Workspace" className="h-14 w-14 rounded-[7px] object-contain shadow-md" />
+            <img src="/logo.png" alt="Iris Monde Workspace" className="h-14 w-14 rounded-[7px] object-contain shadow-md" />
           </div>
 
           <div className="text-center mb-8">
