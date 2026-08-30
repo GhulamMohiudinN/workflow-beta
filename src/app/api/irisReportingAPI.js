@@ -100,18 +100,6 @@ export const irisReportingAPI = {
     );
   },
 
-  downloadEvidenceFile: async (requirementId, fileId) => {
-    const res = await call(() =>
-      api.get(`/iris-reporting/requirements/${requirementId}/files/${fileId}`)
-    );
-    if (res.success) {
-      const url = res.data?.file?.url;
-      if (url) window.open(url, "_blank");
-      else return { success: false, error: "File URL not found" };
-    }
-    return res;
-  },
-
   deleteEvidenceFile: (requirementId, fileId) =>
     call(() =>
       api.delete(`/iris-reporting/requirements/${requirementId}/files/${fileId}`)

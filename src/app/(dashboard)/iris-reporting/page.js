@@ -510,7 +510,7 @@ function AssigneeAutocomplete({ value, onChange, onSelectMember, members = [], p
 
 // ─── Obligation Card ──────────────────────────────────────────────────────────
 function ObligationCard({
-  item, onEdit, onDelete, onUpload, onDeleteFile, onDownload,
+  item, onEdit, onDelete, onUpload, onDeleteFile,
   uploading, onApproveStep, onAddComment, onDeleteComment,
 }) {
   const [expanded,      setExpanded]      = useState(false);
@@ -736,7 +736,7 @@ function ObligationCard({
                           </div>
                         </div>
                         <div className="flex gap-1 shrink-0 ml-2">
-                          <button onClick={() => onDownload(item._id, file._id)}
+                          <button onClick={() => window.open(file.url, "_blank", "noopener,noreferrer")}
                             className="flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-[11px] font-bold text-blue-700 hover:bg-blue-100 transition-colors">
                             <FiDownload size={11} /> View
                           </button>
@@ -1174,9 +1174,6 @@ export default function IrisReportingPage() {
     else toast.error(res.error || "Delete failed");
   };
 
-  const handleDownload = (reqId, fileId) =>
-    irisReportingAPI.downloadEvidenceFile(reqId, fileId);
-
   const handleApproveStep = async (reqId, stepId, decision) => {
     const notes = decision === "rejected"
       ? (window.prompt("Reason for rejection (optional):") || "")
@@ -1419,7 +1416,7 @@ export default function IrisReportingPage() {
                   <ObligationCard key={item._id} item={item}
                     onEdit={handleEdit} onDelete={handleDelete}
                     onUpload={handleUpload} onDeleteFile={handleDeleteFile}
-                    onDownload={handleDownload} uploading={uploadingId}
+                    uploading={uploadingId}
                     onApproveStep={handleApproveStep}
                     onAddComment={handleAddComment}
                     onDeleteComment={handleDeleteComment} />

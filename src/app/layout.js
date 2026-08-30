@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "ALR",
+  title: "Iris Monde",
   description: "Iris Monde Workspace",
 };
 
