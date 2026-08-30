@@ -27,8 +27,9 @@ export default function LoginPage() {
       const role = data.user?.userType || data.role || localStorage.getItem("role");
       router.push(role === "member" ? "/users/dashboardUsers" : "/dashboard");
     } catch (err) {
-      setError(err.message || "Login failed. Please try again.");
-      toast.error(err.message || "Login failed. Please try again.");
+      const message = err.response?.data?.message || err.message || "Login failed. Please try again.";
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
