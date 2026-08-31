@@ -25,7 +25,15 @@ export default function LoginPage() {
       const data = await authAPI.login(formData);
       toast.success("Login successful!");
       const role = data.user?.userType || data.role || localStorage.getItem("role");
-      router.push(role === "member" ? "/users/dashboardUsers" : "/dashboard");
+      if (role === "member") {
+        router.push("/users/dashboardUsers");
+      } else if (!data.workspace) {
+        // Verified but never finished the workspace-setup wizard — resume it
+        // instead of dropping them on a dashboard with no workspace.
+        router.push("/workspaceCreation");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (err) {
       const message = err.response?.data?.message || err.message || "Login failed. Please try again.";
       setError(message);

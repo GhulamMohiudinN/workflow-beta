@@ -21,17 +21,11 @@ export const authAPI = {
     // Ensure role comes from API workspace assignment (role) or fallback to global userType
     const userRole = data.user?.role || data.role || data.user?.userType || "admin";
     localStorage.setItem("role", userRole.toLowerCase());
-    localStorage.setItem(
-      "workspace",
-      JSON.stringify(
-        data.workspace || {
-          companyName: "Demo Company",
-          companyEmail: credentials.email,
-          adminId: { name: "Demo User" },
-          members: [],
-        },
-      ),
-    );
+    if (data.workspace) {
+      localStorage.setItem("workspace", JSON.stringify(data.workspace));
+    } else {
+      localStorage.removeItem("workspace");
+    }
     if (data.token) localStorage.setItem("token", data.token);
     if (data.refreshToken)
       localStorage.setItem("refreshToken", data.refreshToken);

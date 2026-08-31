@@ -308,10 +308,24 @@ function CompanySetupContent() {
           return;
         }
       } else {
-        const userData = JSON.parse(sessionStorage.getItem("userData"));
+        // No token in the URL — either resuming an interrupted setup while
+        // already signed in (came from /login), or continuing right after
+        // signup in the same tab (sessionStorage still has userData).
+        const storedToken = localStorage.getItem("token") || localStorage.getItem("accessToken");
+        const storedUser  = JSON.parse(localStorage.getItem("user") || "null");
+
+        if (storedToken && storedUser?.email) {
+          setValue("companyEmail", storedUser.email);
+          setValue("adminEmail", storedUser.email);
+          setIsReady(true);
+          return;
+        }
+
+        const userData = JSON.parse(sessionStorage.getItem("userData") || "null");
         if (userData) {
           setValue("companyEmail", userData.email);
           setValue("adminEmail", userData.email);
+          setIsReady(true);
         } else {
           router.push("/signup");
         }
