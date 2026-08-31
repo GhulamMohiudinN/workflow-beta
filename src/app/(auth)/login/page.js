@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { loginSchema } from "../../formValidationScheme/authSchema";
 import authAPI from "../../api/auth";
-import toast, { Toaster } from "react-hot-toast";
+import { toast } from "../../../components/Toast";
 import { FiEye, FiEyeOff, FiLock, FiMail, FiShield, FiArrowLeft } from "react-icons/fi";
 import AuthPanel from "../AuthPanel";
 
@@ -48,7 +48,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex bg-[var(--color-bg)]">
-      <Toaster position="top-right" duration={4000} />
 
       {/* ── Left: form ──────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col justify-start pt-12 px-4 sm:px-6 lg:px-20 xl:px-24">

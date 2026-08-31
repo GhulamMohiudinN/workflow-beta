@@ -5,7 +5,7 @@ import {
   FiCheckCircle, FiUsers, FiDatabase, FiZap, FiClock,
 } from "react-icons/fi";
 import { FiCpu } from "react-icons/fi";
-import toast, { Toaster } from "react-hot-toast";
+import { toast } from "../../../components/Toast";
 import { authAPI } from "../../api/auth";
 import workspaceAPI from "../../api/workspaceAPI";
 import { useRouter } from "next/navigation";
@@ -72,7 +72,6 @@ export default function SettingsPage() {
 
   return (
     <div className="-m-4 min-h-[calc(100vh-9rem)] space-y-6 bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 sm:-m-6 sm:p-6">
-      <Toaster position="top-right" />
 
       {/* ── Page Header ──────────────────────────────────────────────────── */}
       <div>

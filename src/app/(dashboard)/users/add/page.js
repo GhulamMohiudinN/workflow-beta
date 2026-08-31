@@ -5,7 +5,7 @@ import {
   FiMail, FiShield, FiCheck, FiSend, FiHelpCircle, FiUser,
   FiArrowLeft, FiEdit2, FiEye, FiDollarSign,
 } from "react-icons/fi";
-import toast, { Toaster } from "react-hot-toast";
+import { toast } from "../../../../components/Toast";
 import adminAPI from "../../../api/admin";
 import { Card, CardContent, CardHeader } from "../../../../components/Card";
 import { Button } from "../../../../components/Button";
@@ -73,7 +73,6 @@ export default function AddUserPage() {
 
   return (
     <div className="-m-4 min-h-[calc(100vh-9rem)] space-y-6 bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 sm:-m-6 sm:p-6">
-      <Toaster duration={4000} position="top-right" />
 
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">

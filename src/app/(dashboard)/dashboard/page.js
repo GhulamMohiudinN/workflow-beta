@@ -150,12 +150,16 @@ export default function DashboardPage() {
     ? Math.round((completedTotal / totalWorkload) * 100)
     : 0;
 
-  // Derive sparkline values from what we have — step series based on counts
-  const memberSparkline  = overview?.members?.trend
-    || [membersTotal > 3 ? membersTotal - 3 : 1, membersTotal > 2 ? membersTotal - 2 : 1,
-        membersTotal > 1 ? membersTotal - 1 : 1, membersTotal];
-  const activeSparkline  = overview?.processes?.trend
-    || [activeProcesses > 2 ? activeProcesses - 2 : 0, activeProcesses > 1 ? activeProcesses - 1 : 0, activeProcesses];
+  // Derive sparkline values from what we have — a gentle ramp ending at the
+  // real current value, so every card renders one consistent line-chart
+  // style instead of a mix of bars/progress tracks/lines.
+  const buildTrend = (current, steps = 5) =>
+    Array.from({ length: steps }, (_, i) => Math.max(0, current - (steps - 1 - i)));
+
+  const memberSparkline    = overview?.members?.trend || buildTrend(membersTotal);
+  const workflowSparkline  = overview?.processes?.trend || buildTrend(activeProcesses);
+  const completionSparkline = buildTrend(completionRate);
+  const resourceSparkline   = buildTrend(resourceLoadPct);
 
   const activities = overview?.recentActivities?.length > 0
     ? overview.recentActivities
@@ -199,8 +203,8 @@ export default function DashboardPage() {
           detail={`${pendingTasks} pending task${pendingTasks !== 1 ? "s" : ""}`}
           icon={FiZap}
           tone="secondary"
-          chart="progress"
-          progress={totalWorkload > 0 ? Math.round((activeProcesses / totalWorkload) * 100) : 0}
+          chart="line"
+          chartValues={workflowSparkline}
         />
         <DashboardMetricCard
           title="Completion Rate"
@@ -208,13 +212,8 @@ export default function DashboardPage() {
           detail={`${completedTotal} completed process${completedTotal !== 1 ? "es" : ""}`}
           icon={FiCheckCircle}
           tone="success"
-          chart="bars"
-          chartValues={[
-            Math.max(1, completedTotal - 3),
-            Math.max(1, completedTotal - 2),
-            Math.max(1, completedTotal - 1),
-            Math.max(1, completedTotal),
-          ]}
+          chart="line"
+          chartValues={completionSparkline}
         />
         <DashboardMetricCard
           title="Resource Load"
@@ -223,7 +222,7 @@ export default function DashboardPage() {
           icon={FiCloud}
           tone="warning"
           chart="line"
-          chartValues={activeSparkline}
+          chartValues={resourceSparkline}
         />
       </div>
 

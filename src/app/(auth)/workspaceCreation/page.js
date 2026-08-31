@@ -2,7 +2,7 @@
 import { useEffect, useState, Suspense, useRef, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FaBuilding } from "react-icons/fa";
-import { toast, Toaster } from "react-hot-toast";
+import { toast } from "../../../components/Toast";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useForm } from "react-hook-form";
 import { authAPI } from "../../api/auth";
@@ -476,7 +476,6 @@ function CompanySetupContent() {
     </div>
   ) : isReady ? (
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <Toaster duration={4000} position="top-right" />
 
       {/* Header */}
       <header className="bg-white border-b border-[var(--color-border)] shadow-sm">

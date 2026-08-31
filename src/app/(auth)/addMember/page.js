@@ -7,7 +7,7 @@ import { addMemberSchema } from "../../formValidationScheme/authSchema";
 import authAPI from "../../api/auth";
 export const dynamic = "force-dynamic";
 import { FiEye, FiEyeOff, FiLock, FiShield, FiArrowLeft, FiUserPlus } from "react-icons/fi";
-import toast, { Toaster } from "react-hot-toast";
+import { toast } from "../../../components/Toast";
 import FullScreenLoader from "../../(component)/FullScreenLoader";
 import AuthPanel from "../AuthPanel";
 
@@ -54,7 +54,6 @@ function AddMemberContent() {
     <React.Fragment>
       <FullScreenLoader loading={screenLoader} />
       <div className="min-h-screen flex bg-[var(--color-bg)]">
-        <Toaster position="top-right" duration={6000} />
 
         {/* ── Left: form ──────────────────────────────────────────────── */}
         <div className="flex-1 flex flex-col justify-start pt-12 px-4 sm:px-6 lg:px-20 xl:px-24">

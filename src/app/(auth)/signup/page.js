@@ -8,7 +8,7 @@ import { signupSchema } from "../../formValidationScheme/authSchema";
 import { useDispatch, useSelector } from "react-redux";
 import { signupUser } from "../../store/slices/authSlice";
 import { FiEye, FiEyeOff, FiLock, FiMail, FiShield, FiArrowLeft, FiUserPlus, FiUser, FiGlobe, FiBriefcase } from "react-icons/fi";
-import toast, { Toaster } from "react-hot-toast";
+import { toast } from "../../../components/Toast";
 import AuthPanel from "../AuthPanel";
 
 export default function SignupPage() {
@@ -36,7 +36,6 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen flex bg-[var(--color-bg)]">
-      <Toaster position="top-center" />
 
       {/* ── Left: form ────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col justify-start pt-12 px-4 sm:px-6 lg:px-20 xl:px-24">

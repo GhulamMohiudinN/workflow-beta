@@ -7,7 +7,7 @@ import {
   FiFileText, FiMail, FiMessageSquare, FiPlus, FiRefreshCw, FiSearch,
   FiSend, FiShield, FiTrash2, FiUploadCloud, FiUser, FiX,
 } from "react-icons/fi";
-import toast, { Toaster } from "react-hot-toast";
+import { toast } from "../../../components/Toast";
 import { irisReportingAPI } from "../../api/irisReportingAPI";
 import { userAPI } from "../../api/userAPI";
 import { reportTemplateAPI } from "../../api/reportTemplateAPI";
@@ -1225,7 +1225,6 @@ export default function IrisReportingPage() {
   // ── Main render ────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-      <Toaster position="top-right" />
 
       {/* Hero Header */}
       <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 to-slate-700 p-6 sm:p-8 text-white shadow-sm">

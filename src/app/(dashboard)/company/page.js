@@ -1,7 +1,7 @@
 "use client";
 export const dynamic = "force-dynamic";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { toast, Toaster } from "react-hot-toast";
+import { toast } from "../../../components/Toast";
 import {
   FiGlobe, FiUsers, FiMapPin, FiCalendar, FiEdit2, FiSave, FiX,
   FiShield, FiDatabase, FiTrendingUp, FiBriefcase, FiCheck,
@@ -373,7 +373,6 @@ export default function CompanyPage() {
 
   return (
     <div className="-m-4 min-h-[calc(100vh-9rem)] space-y-6 bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 sm:-m-6 sm:p-6">
-      <Toaster position="top-right" />
 
       {/* ── Page Header ─────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">

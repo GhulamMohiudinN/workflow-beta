@@ -6,7 +6,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { forgotPasswordSchema } from "../../formValidationScheme/authSchema";
 import { authAPI } from "../../api/auth";
 import Link from "next/link";
-import toast, { Toaster } from "react-hot-toast";
+import { toast } from "../../../components/Toast";
 import { FiMail, FiArrowLeft, FiShield, FiCheckCircle } from "react-icons/fi";
 
 export default function ForgotPasswordPage() {
@@ -33,7 +33,6 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center py-12 px-4">
-      <Toaster position="top-right" duration={4000} />
 
       <div className="w-full max-w-md">
         {/* Card */}

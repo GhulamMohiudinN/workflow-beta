@@ -31,7 +31,7 @@ import {
 } from "react-icons/fi";
 import { processAPI } from "../../api/processAPI";
 import { userAPI } from "../../api/userAPI";
-import toast from "react-hot-toast";
+import { toast } from "../../../components/Toast";
 
 // ─── Node type constants ─────────────────────────────────────────────────────
 const NODE_TYPES_CONFIG = {

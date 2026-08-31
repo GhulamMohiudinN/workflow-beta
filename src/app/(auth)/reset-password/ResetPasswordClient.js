@@ -7,7 +7,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { resetPasswordSchema } from "../../formValidationScheme/authSchema";
 import { authAPI } from "../../api/auth";
 import Link from "next/link";
-import toast, { Toaster } from "react-hot-toast";
+import { toast } from "../../../components/Toast";
 import {
   FiEye, FiEyeOff, FiLock, FiCheckCircle,
 } from "react-icons/fi";
@@ -67,7 +67,6 @@ export default function ResetPasswordClient() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center py-12 px-4">
-      <Toaster position="top-right" />
 
       <div className="w-full max-w-md">
         <div className="bg-white rounded-xl shadow-[var(--shadow-popover)] border border-[var(--color-border)] p-8">

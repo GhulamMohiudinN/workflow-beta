@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { authAPI } from "../../api/auth";
 export const dynamic = "force-dynamic";
 import { FiMail, FiCheckCircle, FiClock, FiArrowLeft, FiRefreshCw, FiAlertCircle, FiShield, FiBriefcase } from "react-icons/fi";
-import toast, { Toaster } from "react-hot-toast";
+import { toast } from "../../../components/Toast";
 
 function EmailVerificationContent() {
   const [countdown, setCountdown] = useState(60);
@@ -61,7 +61,6 @@ function EmailVerificationContent() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <Toaster duration={4000} position="top-right" />
 
       {/* Back */}
       <div className="absolute top-6 left-6">

@@ -1,7 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ReduxProvider } from "./store/provider";
-import { Toaster } from "react-hot-toast";
+import { Toaster } from "../components/Toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,7 +24,7 @@ export default function RootLayout({ children }) {
       <body className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
         <ReduxProvider>
           {children}
-          <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+          <Toaster />
         </ReduxProvider>
       </body>
     </html>

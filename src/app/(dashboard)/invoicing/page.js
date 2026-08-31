@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { FiDownload, FiPlus, FiSend, FiX } from "react-icons/fi";
-import toast, { Toaster } from "react-hot-toast";
+import { toast } from "../../../components/Toast";
 import { invoiceAPI } from "../../api/invoiceAPI";
 
 const EMPTY_INVOICE = {
@@ -53,7 +53,6 @@ export default function InvoicingPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 pb-16">
-      <Toaster position="top-right" />
 
       <div>
         <h1 className="text-xl font-black text-slate-900">Invoicing</h1>
