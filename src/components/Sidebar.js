@@ -1,9 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FiLogOut, FiX } from "react-icons/fi";
 import { Badge } from "./Badge";
 import { Button } from "./Button";
+import workspaceAPI from "../app/api/workspaceAPI";
+
+const formatGb = (bytes) => (bytes / (1024 ** 3)).toFixed(1);
 
 const groupNavigation = (navigation) => {
   const management = new Set(["Users", "Settings", "Activity Logs", "Reports"]);
@@ -21,9 +25,23 @@ export const Sidebar = ({
   onClose,
   navigation = [],
   workspace,
- 
+
 }) => {
   const groups = groupNavigation(navigation);
+  const [storage, setStorage] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    workspaceAPI
+      .getWorkspaceOverview()
+      .then((res) => {
+        if (!cancelled && res?.storage) setStorage(res.storage);
+      })
+      .catch(() => {}); // sidebar chrome — fail silently, keep prior state
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const renderItem = (item) => {
     const Icon = item.icon;
@@ -101,24 +119,27 @@ export const Sidebar = ({
           )}
         </nav>
 
-        <div className="space-y-4 border-t border-[var(--color-border)] p-4">
-          <div className="rounded-lg border border-blue-100 bg-blue-50 p-3">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-xs font-bold text-blue-950">Storage Usage</p>
-              <Badge size="sm" variant="primary">
-                31%
-              </Badge>
+        {storage && (
+          <div className="space-y-4 border-t border-[var(--color-border)] p-4">
+            <div className="rounded-lg border border-blue-100 bg-blue-50 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-xs font-bold text-blue-950">Storage Usage</p>
+                <Badge size="sm" variant="primary">
+                  {storage.percent}%
+                </Badge>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-blue-100">
+                <div
+                  className="h-full rounded-full bg-[var(--color-primary)]"
+                  style={{ width: `${Math.max(storage.percent, storage.usedBytes > 0 ? 2 : 0)}%` }}
+                />
+              </div>
+              <p className="mt-2 text-[10px] font-medium text-blue-700">
+                {formatGb(storage.usedBytes)} GB of {formatGb(storage.limitBytes)} GB used
+              </p>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-blue-100">
-              <div className="h-full w-[31%] rounded-full bg-[var(--color-primary)]" />
-            </div>
-            <p className="mt-2 text-[10px] font-medium text-blue-700">
-              7.3 GB of 10 GB used
-            </p>
           </div>
-
-          
-        </div>
+        )}
       </aside>
     </>
   );
