@@ -8,6 +8,7 @@ import {
   FiBarChart2,
   FiBriefcase,
   FiDollarSign,
+  FiFileText,
   FiGitBranch,
   FiGrid,
   FiLayout,
@@ -114,6 +115,12 @@ export default function DashboardLayout({ children }) {
         href: "/invoicing",
         icon: FiDollarSign,
         current: pathname.includes("/invoicing"),
+      });
+      items.push({
+        name: "Contracts",
+        href: "/contracts",
+        icon: FiFileText,
+        current: pathname.includes("/contracts"),
       });
     }
 

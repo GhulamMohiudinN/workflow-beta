@@ -18,7 +18,7 @@ const PAGE_LABELS = {
   "/dashboard": "Dashboard", "/processes": "Processes", "/templates": "Templates",
   "/builder": "Process Builder", "/users": "Users", "/users/add": "Add Team Member",
   "/settings": "Settings", "/activity-logs": "Activity Logs", "/reports": "Reports",
-  "/iris-reporting": "IRIS Reporting", "/invoicing": "Invoicing", "/company": "Company",
+  "/iris-reporting": "IRIS Reporting", "/invoicing": "Invoicing", "/contracts": "Contracts", "/company": "Company",
 };
 
 const WELCOME = "Hi — I can navigate the app, filter obligations, generate a report, invite a team member, or answer a quick status question. What do you need?";
