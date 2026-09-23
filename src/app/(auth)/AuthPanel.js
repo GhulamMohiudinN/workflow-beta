@@ -45,7 +45,7 @@ export default function AuthPanel({ subtitle = "Enterprise Workflow Platform" })
           <div className="flex items-center justify-center gap-4 pt-2 border-t border-[var(--color-border)]">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-muted)]">
               <FiShield className="h-3.5 w-3.5 text-[var(--color-primary)]" />
-              SOC 2 Type II
+              Isolated Workspaces
             </div>
             <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-muted)]">
               <FiCpu className="h-3.5 w-3.5 text-[var(--color-primary)]" />

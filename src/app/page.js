@@ -592,7 +592,7 @@ export default function Home() {
           </div>
           <div className="footer-bottom">
             <p>© {new Date().getFullYear()} Iris Monde Workspace. All rights reserved.</p>
-            <p>Built with MongoDB · Enterprise-ready · SOC 2 Type II Certified</p>
+            <p>Built with MongoDB · Enterprise-ready · Isolated workspaces per company</p>
           </div>
         </div>
       </footer>
