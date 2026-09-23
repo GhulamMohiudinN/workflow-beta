@@ -1,0 +1,36 @@
+name: CI
+
+# Vercel deploys this repo automatically on every push to main. The build step
+# below is the gate: it catches broken imports, syntax errors and bad JSX
+# before they reach the live site instead of after.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20 # Next.js 16 requires >= 20.9
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # Informational for now. The codebase currently has pre-existing lint
+      # errors, so making this blocking would fail every run and train everyone
+      # to ignore CI. Flip continue-on-error off once those are cleared.
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true
