@@ -5,7 +5,7 @@ import {
   FiAlertCircle, FiAlertTriangle, FiCheckCircle, FiChevronDown,
   FiChevronLeft, FiChevronRight, FiChevronUp, FiClock, FiDatabase, FiDownload, FiEdit2,
   FiFileText, FiMail, FiMessageSquare, FiPlus, FiRefreshCw, FiSearch,
-  FiSend, FiShield, FiTrash2, FiUploadCloud, FiUser, FiX,
+  FiSend, FiShield, FiSliders, FiTrash2, FiUploadCloud, FiUser, FiX,
 } from "react-icons/fi";
 import { toast } from "../../../components/Toast";
 import { irisReportingAPI } from "../../api/irisReportingAPI";
@@ -64,6 +64,48 @@ function ApprovalBadge({ status }) {
 function MatBadge({ value }) {
   return <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${MAT_COLOR[value] || MAT_COLOR.Standard}`}>{value}</span>;
 }
+
+// ─── Report Pack table columns ────────────────────────────────────────────────
+// Every column here is data the system already holds. The seven marked
+// `defaultOn` are the original set, so the table looks exactly as it did until
+// someone opts into more. Obligation is locked — hiding the identifier would
+// leave rows you can't tell apart.
+const fmtDate = (value) =>
+  value ? new Date(value).toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+
+const REPORT_COLUMNS = [
+  { key: "title", label: "Obligation", locked: true, cellClass: "max-w-[200px]",
+    render: (r) => (
+      <>
+        <p className="text-sm font-black text-slate-900 truncate">{r.title}</p>
+        {r.legislationRef && <p className="text-[11px] font-mono text-slate-400 truncate">{r.legislationRef}</p>}
+      </>
+    ) },
+  { key: "source",         label: "Source",        defaultOn: true, cellClass: "text-xs text-slate-600 max-w-[150px] truncate", render: (r) => r.source || "—" },
+  { key: "owner",          label: "Owner",         defaultOn: true, cellClass: "text-xs text-slate-600",                        render: (r) => r.owner || "—" },
+  { key: "dueDate",        label: "Due Date",      defaultOn: true, cellClass: "text-xs text-slate-600 whitespace-nowrap",      render: (r) => fmtDate(r.dueDate) },
+  { key: "status",         label: "Status",        defaultOn: true,                                                            render: (r) => <StatusBadge status={r.status} /> },
+  { key: "materiality",    label: "Materiality",   defaultOn: true,                                                            render: (r) => <MatBadge value={r.materiality} /> },
+  { key: "evidenceFiles",  label: "Evidence Files", defaultOn: true, cellClass: "text-xs font-black text-slate-900",            render: (r) => r.evidenceFiles?.length || 0 },
+
+  // Optional — off until the user turns them on
+  { key: "legislationRef",     label: "Legislation Ref",     cellClass: "text-xs font-mono text-slate-600",               render: (r) => r.legislationRef || "—" },
+  { key: "category",           label: "Category",            cellClass: "text-xs text-slate-600",                         render: (r) => r.category || "—" },
+  { key: "obligationType",     label: "Type",                cellClass: "text-xs text-slate-600 capitalize",              render: (r) => (r.obligationType || "—").replace(/_/g, " ") },
+  { key: "reportType",         label: "Report Type",         cellClass: "text-xs text-slate-600",                         render: (r) => r.reportType || "—" },
+  { key: "reportingPeriod",    label: "Period",              cellClass: "text-xs text-slate-600 whitespace-nowrap",       render: (r) => r.reportingPeriod || "—" },
+  { key: "approvalStatus",     label: "Approval",
+    render: (r) => (r.approvalRequired ? <ApprovalBadge status={r.approvalStatus} /> : <span className="text-xs text-slate-400">—</span>) },
+  { key: "evidenceRequired",   label: "Evidence Required",   cellClass: "text-xs text-slate-600",                         render: (r) => r.evidenceRequired?.filter(Boolean).length || 0 },
+  { key: "comments",           label: "Comments",            cellClass: "text-xs text-slate-600",                         render: (r) => r.comments?.length || 0 },
+  { key: "ownerEmail",         label: "Owner Email",         cellClass: "text-xs text-slate-600 max-w-[180px] truncate",  render: (r) => r.ownerEmail || "—" },
+  { key: "legislationVersion", label: "Legislation Version", cellClass: "text-xs text-slate-600 max-w-[160px] truncate",  render: (r) => r.legislationVersion || "—" },
+  { key: "ruleVersion",        label: "Rule Version",        cellClass: "text-xs text-slate-600",                         render: (r) => r.ruleVersion || "—" },
+  { key: "updatedAt",          label: "Last Updated",        cellClass: "text-xs text-slate-600 whitespace-nowrap",       render: (r) => fmtDate(r.updatedAt) },
+];
+
+const DEFAULT_COLUMN_KEYS = REPORT_COLUMNS.filter((c) => c.locked || c.defaultOn).map((c) => c.key);
+const COLUMN_STORAGE_KEY = "iris.reportPackColumns";
 
 function StatCard({ label, value, sub, icon: Icon, tone }) {
   const tones = {
@@ -875,6 +917,56 @@ export default function IrisReportingPage() {
   const [reportSearch,    setReportSearch]    = useState("");
   const [selectedReportIds, setSelectedReportIds] = useState(() => new Set());
   const [showCustomReport, setShowCustomReport]   = useState(false);
+
+  // Which Report Pack columns are shown. Starts as the original seven and is
+  // remembered per browser, so a chosen layout survives a reload.
+  const [visibleColumnKeys, setVisibleColumnKeys] = useState(DEFAULT_COLUMN_KEYS);
+  const [columnMenuOpen, setColumnMenuOpen] = useState(false);
+  const columnMenuRef = useRef(null);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(COLUMN_STORAGE_KEY) || "null");
+      if (!Array.isArray(saved)) return;
+      // Drop any keys from an older version of this list before trusting it.
+      const known = saved.filter((key) => REPORT_COLUMNS.some((c) => c.key === key));
+      if (known.length) setVisibleColumnKeys(known);
+    } catch {
+      /* corrupt or unavailable storage — keep the defaults */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!columnMenuOpen) return;
+    const onClickOutside = (e) => {
+      if (columnMenuRef.current && !columnMenuRef.current.contains(e.target)) setColumnMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [columnMenuOpen]);
+
+  const persistColumns = (keys) => {
+    try { localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(keys)); } catch { /* non-fatal */ }
+  };
+
+  const toggleColumn = (key) => {
+    setVisibleColumnKeys((prev) => {
+      const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
+      persistColumns(next);
+      return next;
+    });
+  };
+
+  const resetColumns = () => {
+    setVisibleColumnKeys(DEFAULT_COLUMN_KEYS);
+    persistColumns(DEFAULT_COLUMN_KEYS);
+  };
+
+  // Ordered by the definition list, not by the order they were switched on.
+  const activeColumns = useMemo(
+    () => REPORT_COLUMNS.filter((c) => c.locked || visibleColumnKeys.includes(c.key)),
+    [visibleColumnKeys]
+  );
   const [templates,        setTemplates]        = useState([]);
   const [uploadingTemplate, setUploadingTemplate] = useState(false);
   const [generatingTemplateId, setGeneratingTemplateId] = useState(null);
@@ -1550,6 +1642,54 @@ export default function IrisReportingPage() {
                   <p className="text-xs font-semibold text-slate-500">
                     {selectedReportIds.size > 0 ? `${selectedReportIds.size} selected` : "Select obligations to build a custom report"}
                   </p>
+
+                  {/* Column picker */}
+                  <div className="relative" ref={columnMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setColumnMenuOpen((open) => !open)}
+                      className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                      <FiSliders size={13} /> Columns
+                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-black text-slate-500">
+                        {activeColumns.length}
+                      </span>
+                      <FiChevronDown size={12} className={`transition-transform ${columnMenuOpen ? "rotate-180" : ""}`} />
+                    </button>
+
+                    {columnMenuOpen && (
+                      <div className="absolute right-0 top-full z-50 mt-1.5 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                        <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2.5">
+                          <p className="text-[11px] font-black uppercase tracking-wider text-slate-500">Show columns</p>
+                          <button type="button" onClick={resetColumns}
+                            className="text-[11px] font-bold text-blue-700 hover:text-blue-900">
+                            Reset
+                          </button>
+                        </div>
+                        <div className="max-h-72 overflow-y-auto py-1">
+                          {REPORT_COLUMNS.map((col) => {
+                            const checked = col.locked || visibleColumnKeys.includes(col.key);
+                            return (
+                              <label key={col.key}
+                                className={`flex items-center gap-2.5 px-3 py-2 text-xs ${
+                                  col.locked ? "cursor-default opacity-60" : "cursor-pointer hover:bg-slate-50"
+                                }`}>
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  disabled={col.locked}
+                                  onChange={() => toggleColumn(col.key)}
+                                  className="h-3.5 w-3.5 rounded border-slate-300 text-blue-700"
+                                />
+                                <span className="font-semibold text-slate-700">{col.label}</span>
+                                {col.locked && <span className="ml-auto text-[10px] font-bold text-slate-400">Always</span>}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <button
                     type="button"
                     disabled={selectedReportIds.size === 0}
@@ -1625,14 +1765,16 @@ export default function IrisReportingPage() {
                           onChange={toggleSelectAllVisible}
                           className="h-4 w-4 rounded border-slate-300 text-blue-700" />
                       </th>
-                      {["Obligation", "Source", "Owner", "Due Date", "Status", "Materiality", "Evidence Files"].map((h) => (
-                        <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">{h}</th>
+                      {activeColumns.map((col) => (
+                        <th key={col.key} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                          {col.label}
+                        </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-white">
                     {reportFiltered.length === 0 ? (
-                      <tr><td colSpan={8} className="px-4 py-10 text-center text-sm text-slate-400">
+                      <tr><td colSpan={activeColumns.length + 1} className="px-4 py-10 text-center text-sm text-slate-400">
                         {reportSearch ? `No obligations matching "${reportSearch}"` : "No obligations defined yet."}
                       </td></tr>
                     ) : reportFiltered.map((r) => (
@@ -1642,18 +1784,11 @@ export default function IrisReportingPage() {
                             onChange={() => toggleReportSelection(r._id)}
                             className="h-4 w-4 rounded border-slate-300 text-blue-700" />
                         </td>
-                        <td className="px-4 py-3 max-w-[200px]">
-                          <p className="text-sm font-black text-slate-900 truncate">{r.title}</p>
-                          {r.legislationRef && <p className="text-[11px] font-mono text-slate-400 truncate">{r.legislationRef}</p>}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-slate-600 max-w-[150px] truncate">{r.source || "—"}</td>
-                        <td className="px-4 py-3 text-xs text-slate-600">{r.owner || "—"}</td>
-                        <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">
-                          {r.dueDate ? new Date(r.dueDate).toLocaleDateString("en-AU", { day:"2-digit", month:"short", year:"numeric" }) : "—"}
-                        </td>
-                        <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
-                        <td className="px-4 py-3"><MatBadge value={r.materiality} /></td>
-                        <td className="px-4 py-3 text-xs font-black text-slate-900">{r.evidenceFiles?.length || 0}</td>
+                        {activeColumns.map((col) => (
+                          <td key={col.key} className={`px-4 py-3 ${col.cellClass || ""}`}>
+                            {col.render(r)}
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
