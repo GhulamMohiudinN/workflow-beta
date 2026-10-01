@@ -46,6 +46,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [recentMembers, setRecentMembers] = useState([]);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     const initDashboard = async () => {
@@ -58,6 +59,7 @@ export default function DashboardPage() {
         const storedWorkspace = localStorage.getItem("workspace");
 
         setRole(storedRole);
+        if (storedUser) setUser(JSON.parse(storedUser));
         if (storedWorkspace) setWorkspace(JSON.parse(storedWorkspace));
 
         const overviewData = await workspaceAPI.getWorkspaceOverview();
@@ -137,7 +139,13 @@ export default function DashboardPage() {
   const activeProcesses  = safeCount(overview?.processes?.active?.total);
   const pendingTasks     = safeCount(overview?.processes?.pending?.total);
   const completedTotal   = safeCount(overview?.processes?.completed?.total);
-  const workspaceName    = workspace?.name || "Alex";
+  // The greeting reads as a person's name, so greet the person. This used to
+  // read workspace?.name — a field the workspace model does not have — so it
+  // fell through to a hardcoded "Alex" for every user on every workspace.
+  const firstName        = (user?.name || "").trim().split(/\s+/)[0];
+  const greetingName     = firstName || workspace?.companyName || "there";
+  const hour             = new Date().getHours();
+  const timeOfDay        = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
 
   // Resource Load: ratio of pending work to total workload (0–100), real metric
   const totalWorkload    = activeProcesses + pendingTasks + completedTotal;
@@ -173,7 +181,7 @@ export default function DashboardPage() {
             Command Center Overview
           </h1>
           <p className="mt-1 text-sm font-medium text-[var(--color-muted)]">
-            Good morning, {workspaceName}. Here is what is happening in your
+            Good {timeOfDay}, {greetingName}. Here is what is happening in your
             workspace today.
           </p>
         </div>
@@ -230,7 +238,7 @@ export default function DashboardPage() {
         <ActivityFeed activities={activities} formatTimeAgo={formatTimeAgo} />
         <div className="space-y-5">
           <QuickActions />
-          <TeamOverview members={recentMembers} />
+          <TeamOverview members={recentMembers} totalMembers={membersTotal} />
         </div>
       </div>
     </div>

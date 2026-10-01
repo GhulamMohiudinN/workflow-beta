@@ -9,6 +9,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  // /signup no longer hosts a registration form — access is by invitation, and
+  // that page explains how to get it. The labels below changed to match.
   const handleGetStarted = () => {
     setLoading(true);
     router.push("/signup");
@@ -40,7 +42,7 @@ export default function Home() {
                 className="btn-primary" 
                 style={{ padding: "10px 22px", fontSize: "14px" }}
               >
-                Get started free
+                Request access
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
                 </svg>
@@ -70,7 +72,7 @@ export default function Home() {
               </p>
               <div className="hero-actions">
                 <button onClick={handleGetStarted} className="btn-primary">
-                  Create your Iris Monde Workspace
+                  Request your Iris Monde Workspace
                   <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
                   </svg>
@@ -536,10 +538,10 @@ export default function Home() {
         <div className="cta-glow"></div>
         <div className="cta-inner">
           <h2>Ready to transform your operations?</h2>
-          <p>Join teams worldwide managing their workflows with precision, clarity, and security.</p>
+          <p>Join teams worldwide managing their workflows with precision, clarity, and security. Workspaces are set up for you — get in touch to arrange yours.</p>
           <div className="cta-buttons">
             <button onClick={handleGetStarted} className="btn-primary">
-              Create your workspace
+              Request your workspace
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
               </svg>

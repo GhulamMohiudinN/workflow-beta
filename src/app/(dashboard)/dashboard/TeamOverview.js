@@ -3,12 +3,15 @@ import { FiMessageSquare } from "react-icons/fi";
 import { Badge } from "../../../components/Badge";
 import { SectionCard } from "./SectionCard";
 
-export const TeamOverview = ({ members = [] }) => (
+// The badge used to read a hardcoded "12 Online". There is no presence
+// tracking in the app, so it reports the real member count instead of
+// inventing an online figure.
+export const TeamOverview = ({ members = [], totalMembers = 0 }) => (
   <SectionCard
     title="Team Overview"
     action={
       <Badge variant="primary" size="sm">
-        12 Online
+        {totalMembers} {totalMembers === 1 ? "member" : "members"}
       </Badge>
     }
   >

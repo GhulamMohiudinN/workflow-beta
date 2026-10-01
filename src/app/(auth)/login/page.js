@@ -25,7 +25,11 @@ export default function LoginPage() {
       const data = await authAPI.login(formData);
       toast.success("Login successful!");
       const role = data.user?.userType || data.role || localStorage.getItem("role");
-      if (role === "member") {
+      if (role === "owner") {
+        // A platform operator has no workspace by design, so the branch below
+        // would otherwise send them into the workspace-setup wizard.
+        router.push("/platform");
+      } else if (role === "member") {
         router.push("/users/dashboardUsers");
       } else if (!data.workspace) {
         // Verified but never finished the workspace-setup wizard — resume it
