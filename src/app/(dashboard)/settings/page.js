@@ -45,7 +45,9 @@ export default function SettingsPage() {
   const submitChangePassword = async (e) => {
     e.preventDefault();
     if (passwordData.newPassword !== passwordData.confirmPassword) { toast.error("New passwords do not match"); return; }
-    if (passwordData.newPassword.length < 6) { toast.error("Password must be at least 6 characters"); return; }
+    if (passwordData.newPassword.length < 8 || !/\d/.test(passwordData.newPassword) || !/[a-zA-Z]/.test(passwordData.newPassword)) {
+      toast.error("Password must be at least 8 characters and include a letter and a number"); return;
+    }
     setChangingPassword(true);
     try {
       await authAPI.changePassword(passwordData.currentPassword, passwordData.newPassword);
@@ -120,7 +122,7 @@ export default function SettingsPage() {
                   <div className="relative">
                     <input type={showNewPass ? "text" : "password"} name="newPassword"
                       value={passwordData.newPassword} onChange={handlePasswordChange} required
-                      className={inputCls} placeholder="Min. 6 characters" />
+                      className={inputCls} placeholder="Min. 8, with a letter and a number" />
                     <button type="button" onClick={() => setShowNewPass(!showNewPass)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-faint)] hover:text-[var(--color-primary)] transition-colors">
                       {showNewPass ? <FiEyeOff className="h-4 w-4" /> : <FiEye className="h-4 w-4" />}
