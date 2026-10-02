@@ -93,6 +93,13 @@ export const authAPI = {
     return response.data;
   },
 
+  // The workspace as stored, including fields the cached copy in localStorage
+  // may predate (billing details were added later than most saved sessions).
+  getUserWorkspace: async () => {
+    const response = await api.get("/workspace/getUserWorkspace");
+    return response.data?.workspace || response.data;
+  },
+
   // Update workspace
   updateWorkspace: async (workspaceData) => {
     const response = await api.patch(

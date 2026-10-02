@@ -1,17 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { FiDownload, FiPlus, FiSend, FiX } from "react-icons/fi";
+import { useEffect, useMemo, useState } from "react";
+import { FiDownload, FiPlus, FiSend, FiX, FiSave } from "react-icons/fi";
 import { toast } from "../../../components/Toast";
 import { invoiceAPI } from "../../api/invoiceAPI";
+import { authAPI } from "../../api/auth";
 
 const EMPTY_INVOICE = {
   invoiceNumber: "",
   issueDate: "",
   servicePeriod: "",
   currency: "USD",
-  supplier: { name: "", abn: "", website: "" },
+  supplier: { name: "", abn: "", website: "", address: "" },
   client: { name: "", representative: "", address: "" },
+  bank: { bankName: "", accountName: "", bsb: "", accountNumber: "", swift: "" },
   items: [{ description: "", period: "", amount: "" }],
   paymentTerms: "",
   notes: "",
@@ -21,10 +23,72 @@ export default function InvoicingPage() {
   const [invoice, setInvoice] = useState(EMPTY_INVOICE);
   const [recipientEmail, setRecipientEmail] = useState("");
   const [sending, setSending] = useState(false);
+  const [savingDefaults, setSavingDefaults] = useState(false);
+
+  // Supplier and bank details are the same on every invoice, so they are held
+  // on the workspace and prefilled here rather than re-keyed each time — which
+  // for an account number is how money reaches the wrong account.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const ws = await authAPI.getUserWorkspace();
+        if (cancelled || !ws) return;
+        setInvoice((prev) => ({
+          ...prev,
+          currency: ws.currency || prev.currency,
+          supplier: {
+            name: ws.companyName || prev.supplier.name,
+            abn: ws.taxId || prev.supplier.abn,
+            website: ws.website || prev.supplier.website,
+            address: ws.billing?.address || ws.headquarters || prev.supplier.address,
+          },
+          bank: {
+            bankName: ws.billing?.bankName || "",
+            accountName: ws.billing?.accountName || "",
+            bsb: ws.billing?.bsb || "",
+            accountNumber: ws.billing?.accountNumber || "",
+            swift: ws.billing?.swift || "",
+          },
+        }));
+      } catch {
+        // Prefill is a convenience — a failure here must not block invoicing.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const saveAsDefaults = async () => {
+    setSavingDefaults(true);
+    try {
+      await authAPI.updateWorkspace({
+        billing: { address: invoice.supplier.address, ...invoice.bank },
+      });
+      toast.success("Saved. These details will prefill on your next invoice.");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not save these details.");
+    } finally {
+      setSavingDefaults(false);
+    }
+  };
 
   const totalAmount = useMemo(
     () => invoice.items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0).toFixed(2),
     [invoice.items]
+  );
+
+  // Mirrors buildBankSection on the backend: only populated fields appear, so
+  // the preview and the emailed invoice show the same thing.
+  const bankRows = useMemo(
+    () =>
+      [
+        ["Bank", invoice.bank.bankName],
+        ["Account name", invoice.bank.accountName],
+        ["BSB", invoice.bank.bsb],
+        ["Account number", invoice.bank.accountNumber],
+        ["SWIFT / BIC", invoice.bank.swift],
+      ].filter(([, value]) => value),
+    [invoice.bank]
   );
 
   const updateItem = (idx, field, value) => {
@@ -84,6 +148,12 @@ export default function InvoicingPage() {
             <Field label="ABN / Business Number">
               <input value={invoice.supplier.abn} onChange={(e) => setInvoice({ ...invoice, supplier: { ...invoice.supplier, abn: e.target.value } })} className={inputCls} />
             </Field>
+            <Field label="Address">
+              <textarea rows={2} value={invoice.supplier.address}
+                onChange={(e) => setInvoice({ ...invoice, supplier: { ...invoice.supplier, address: e.target.value } })}
+                placeholder="Level 5, 120 Collins Street, Melbourne VIC 3000"
+                className={`${inputCls} resize-y`} />
+            </Field>
             <Field label="Website">
               <input value={invoice.supplier.website} onChange={(e) => setInvoice({ ...invoice, supplier: { ...invoice.supplier, website: e.target.value } })} className={inputCls} />
             </Field>
@@ -98,8 +168,42 @@ export default function InvoicingPage() {
               <input value={invoice.client.representative} onChange={(e) => setInvoice({ ...invoice, client: { ...invoice.client, representative: e.target.value } })} className={inputCls} />
             </Field>
             <Field label="Address">
-              <input value={invoice.client.address} onChange={(e) => setInvoice({ ...invoice, client: { ...invoice.client, address: e.target.value } })} className={inputCls} />
+              <textarea rows={2} value={invoice.client.address}
+                onChange={(e) => setInvoice({ ...invoice, client: { ...invoice.client, address: e.target.value } })}
+                className={`${inputCls} resize-y`} />
             </Field>
+          </div>
+        </div>
+
+        <div className="space-y-3 rounded-xl border border-slate-200 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-black uppercase tracking-wider text-slate-400">Payment Details</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Shown on the invoice so the client knows where to pay. Leave a field blank to omit it.
+              </p>
+            </div>
+            <button type="button" onClick={saveAsDefaults} disabled={savingDefaults}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+              <FiSave size={12} />
+              {savingDefaults ? "Saving…" : "Save as default"}
+            </button>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { key: "bankName",      label: "Bank",           placeholder: "Commonwealth Bank" },
+              { key: "accountName",   label: "Account Name",   placeholder: "Reseaux Access Pty Ltd" },
+              { key: "bsb",           label: "BSB",            placeholder: "063-000" },
+              { key: "accountNumber", label: "Account Number", placeholder: "1234 5678" },
+              { key: "swift",         label: "SWIFT / BIC",    placeholder: "For international payments" },
+            ].map((f) => (
+              <Field key={f.key} label={f.label}>
+                <input value={invoice.bank[f.key]} placeholder={f.placeholder}
+                  onChange={(e) => setInvoice({ ...invoice, bank: { ...invoice.bank, [f.key]: e.target.value } })}
+                  className={inputCls} />
+              </Field>
+            ))}
           </div>
         </div>
 
@@ -172,13 +276,14 @@ export default function InvoicingPage() {
             <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Supplier</p>
             <p className="mt-1 text-sm font-bold text-slate-900">{invoice.supplier.name || "—"}</p>
             {invoice.supplier.abn && <p className="text-xs text-slate-600">ABN: {invoice.supplier.abn}</p>}
+            {invoice.supplier.address && <p className="whitespace-pre-line text-xs text-slate-600">{invoice.supplier.address}</p>}
             {invoice.supplier.website && <p className="text-xs text-slate-600">{invoice.supplier.website}</p>}
           </div>
           <div>
             <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Client</p>
             <p className="mt-1 text-sm font-bold text-slate-900">{invoice.client.name || "—"}</p>
             {invoice.client.representative && <p className="text-xs text-slate-600">Represented by {invoice.client.representative}</p>}
-            {invoice.client.address && <p className="text-xs text-slate-600">{invoice.client.address}</p>}
+            {invoice.client.address && <p className="whitespace-pre-line text-xs text-slate-600">{invoice.client.address}</p>}
           </div>
         </div>
 
@@ -205,6 +310,28 @@ export default function InvoicingPage() {
           <p className="text-xs text-slate-400">TOTAL DUE</p>
           <p className="text-2xl font-black text-slate-900">{totalAmount} {invoice.currency}</p>
         </div>
+
+        {bankRows.length > 0 && (
+          <div className="mt-6 border-l-[3px] border-[var(--color-primary)] bg-slate-50 p-4">
+            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+              Payment Details{invoice.currency ? ` (${invoice.currency})` : ""}
+            </p>
+            <table className="mt-2 border-collapse">
+              <tbody>
+                {bankRows.map(([label, value]) => (
+                  <tr key={label}>
+                    <td className="whitespace-nowrap py-1 pr-3 text-xs text-slate-500">{label}</td>
+                    <td className="py-1 text-xs font-bold text-slate-900">{value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
+              These account details do not change. If you receive a request to pay a different
+              account, please call us on a number you already hold to verify before paying.
+            </p>
+          </div>
+        )}
 
         {invoice.paymentTerms && <p className="mt-6 text-xs text-slate-500"><strong>Payment Terms:</strong> {invoice.paymentTerms}</p>}
         {invoice.notes && <p className="mt-2 text-xs text-slate-500">{invoice.notes}</p>}
