@@ -142,9 +142,15 @@ const workspaceAPI = {
       };
     }
   },
-  deleteWorkspace: async () => {
+  // Permanently deletes the caller's workspace and everything in it. The
+  // workspace name is sent as confirmation and checked server-side too — the
+  // typed confirmation on the settings screen only protects the browser, not
+  // the endpoint.
+  deleteWorkspace: async (confirmName) => {
     try {
-      const response = await api.delete("/workspace/deleteWorkspace");
+      const response = await api.delete("/workspace/deleteWorkspace", {
+        data: { confirmName },
+      });
       return response.data;
     } catch (error) {
       console.error("Error deleting workspace:", error);

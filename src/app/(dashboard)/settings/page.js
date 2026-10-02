@@ -60,7 +60,7 @@ export default function SettingsPage() {
     if (confirmName !== workspaceName) { toast.error("Iris Monde Workspace name does not match"); return; }
     setIsDeleting(true);
     try {
-      await workspaceAPI.deleteWorkspace();
+      await workspaceAPI.deleteWorkspace(confirmName);
       toast.success("Iris Monde Workspace deleted successfully");
       localStorage.clear();
       router.push("/login");
