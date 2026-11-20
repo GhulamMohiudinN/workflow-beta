@@ -59,6 +59,33 @@ export const userAPI = {
   },
 
   /**
+   * PATCH /users/update-team-members/:userId
+   * Changes another member of your workspace. Admin only.
+   *
+   * Not the same as updateUser above, which edits the person who is signed in.
+   * The Edit Member screen used to call updateUser, so editing a teammate's
+   * name or role silently rewrote the admin's own instead.
+   */
+  updateTeamMember: async (userId, payload) => {
+    try {
+      const body = { name: payload.name, role: payload.role };
+      if (payload.rate !== undefined && payload.rate !== null && payload.rate !== "") body.rate = Number(payload.rate);
+      const response = await api.patch(`/users/update-team-members/${userId}`, body);
+      return {
+        success: true,
+        user: response.data.user || response.data.member,
+        message: response.data.message || "Member updated successfully",
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || "Failed to update member",
+        status: error.response?.status,
+      };
+    }
+  },
+
+  /**
    * DELETE /users/delete-user/:userId
    * Superadmin only.
    */

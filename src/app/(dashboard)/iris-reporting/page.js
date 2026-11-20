@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FiAlertCircle, FiAlertTriangle, FiCheckCircle, FiChevronDown,
-  FiChevronLeft, FiChevronRight, FiChevronUp, FiClock, FiDatabase, FiDownload, FiEdit2,
+  FiChevronLeft, FiChevronRight, FiChevronUp, FiClock, FiDatabase, FiDownload, FiEdit2, FiEye,
   FiFileText, FiMail, FiMessageSquare, FiPlus, FiRefreshCw, FiSearch,
   FiSend, FiShield, FiSliders, FiTrash2, FiUploadCloud, FiUser, FiX,
 } from "react-icons/fi";
@@ -550,6 +550,51 @@ function AssigneeAutocomplete({ value, onChange, onSelectMember, members = [], p
   );
 }
 
+// ─── Evidence file access ─────────────────────────────────────────────────────
+// Files are fetched through the API as short-lived signed links. Opening the
+// stored URL directly broke for PDFs (Cloudinary blocks them on public image
+// URLs) and left every file permanently public to anyone holding the link.
+const dataUrlToBlobUrl = (dataUrl) => {
+  const [meta, base64] = dataUrl.split(",");
+  const mime = (meta.match(/data:([^;]+)/) || [])[1] || "application/octet-stream";
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  return URL.createObjectURL(new Blob([bytes], { type: mime }));
+};
+
+async function accessEvidence(requirementId, file, mode) {
+  // A tab opened after an await is treated as an unrequested pop-up and
+  // blocked, so for viewing it is opened now, while the click still counts,
+  // and pointed at the file once the link arrives.
+  const tab = mode === "view" ? window.open("", "_blank") : null;
+  if (tab) tab.document.title = "Opening…";
+
+  const res = await irisReportingAPI.getEvidenceLinks(requirementId, file._id);
+  const links = res.data?.file;
+  if (!res.success || !links) {
+    if (tab) tab.close();
+    toast.error(res.error || "Could not open that file");
+    return;
+  }
+
+  const href = links.dataUrl
+    ? dataUrlToBlobUrl(links.dataUrl)
+    : mode === "view" ? links.viewUrl : links.downloadUrl;
+
+  if (tab) {
+    tab.opener = null;
+    tab.location.href = href;
+    return;
+  }
+
+  const a = document.createElement("a");
+  a.href = href;
+  a.download = file.fileName || "evidence";
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
 // ─── Obligation Card ──────────────────────────────────────────────────────────
 function ObligationCard({
   item, onEdit, onDelete, onUpload, onDeleteFile,
@@ -778,9 +823,14 @@ function ObligationCard({
                           </div>
                         </div>
                         <div className="flex gap-1 shrink-0 ml-2">
-                          <button onClick={() => window.open(file.url, "_blank", "noopener,noreferrer")}
+                          <button onClick={() => accessEvidence(item._id, file, "view")}
                             className="flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-[11px] font-bold text-blue-700 hover:bg-blue-100 transition-colors">
-                            <FiDownload size={11} /> View
+                            <FiEye size={11} /> View
+                          </button>
+                          <button onClick={() => accessEvidence(item._id, file, "download")}
+                            title="Download"
+                            className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                            <FiDownload size={11} />
                           </button>
                           <button onClick={() => onDeleteFile(item._id, file._id)}
                             className="rounded-lg border border-red-100 bg-red-50 px-2.5 py-1.5 text-[11px] font-bold text-red-600 hover:bg-red-100 transition-colors">

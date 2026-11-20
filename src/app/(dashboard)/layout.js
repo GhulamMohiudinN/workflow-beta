@@ -102,14 +102,15 @@ export default function DashboardLayout({ children }) {
       icon: LuChartNoAxesCombined,
       current: pathname.includes("/reports"),
     });
-    items.push({
-      name: "IRIS Reporting",
-      href: "/iris-reporting",
-      icon: FiShield,
-      current: pathname.includes("/iris-reporting"),
-    });
-
+    // Everything below is admin-only on the server. IRIS Reporting used to be
+    // shown to Editors too, who then got a page of refused requests.
     if (role === "admin") {
+      items.push({
+        name: "IRIS Reporting",
+        href: "/iris-reporting",
+        icon: FiShield,
+        current: pathname.includes("/iris-reporting"),
+      });
       items.push({
         name: "Invoicing",
         href: "/invoicing",

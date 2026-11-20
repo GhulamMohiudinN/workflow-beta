@@ -104,4 +104,12 @@ export const irisReportingAPI = {
     call(() =>
       api.delete(`/iris-reporting/requirements/${requirementId}/files/${fileId}`)
     ),
+
+  // Short-lived signed links for one evidence file. Opening the stored URL
+  // directly failed for PDFs, which Cloudinary blocks on public image URLs;
+  // these go through its authenticated download API instead.
+  getEvidenceLinks: (requirementId, fileId) =>
+    call(() =>
+      api.get(`/iris-reporting/requirements/${requirementId}/files/${fileId}`)
+    ),
 };

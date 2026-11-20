@@ -228,7 +228,16 @@ function EditUserModal({ user, onClose, onSaved }) {
     if (trimmed === user?.name && role === user?.role) { onClose(); return; }
     setError(""); setLoading(true);
     try {
-      const res = await userAPI.updateUser({ name: trimmed, role });
+      // The member being edited, not the signed-in admin. This used to call
+      // updateUser, which changes whoever is signed in — so editing a teammate
+      // quietly renamed the admin and could demote them to Editor or Viewer.
+      const res = await userAPI.updateTeamMember(user._id || user.id, { name: trimmed, role, rate: user.rate });
+      // userAPI reports failure in its return value rather than throwing, so it
+      // has to be checked here or a refused change would still show as saved.
+      if (!res.success) {
+        setError(res.error || "Failed to update member. Please try again.");
+        return;
+      }
       const updated = { ...user, name: trimmed, role, ...(res?.user || {}) };
       setSuccess(true);
       setTimeout(() => { onSaved(updated); }, 600);
@@ -602,20 +611,27 @@ export default function UsersPage() {
                         >
                           <FiEye size={15} />
                         </button>
-                        <button
-                          onClick={() => setEditUser(u)}
-                          className="app-focus flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-primary)] transition-colors"
-                          title="Edit member"
-                        >
-                          <FiEdit2 size={15} />
-                        </button>
-                        <button
-                          onClick={() => setDeleteUser(u)}
-                          className="app-focus flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-muted)] hover:bg-red-50 hover:text-red-600 transition-colors"
-                          title="Delete member"
-                        >
-                          <FiTrash2 size={15} />
-                        </button>
+                        {/* Only invited members can be edited or removed here. The
+                            workspace owner is changed from their own profile, and the
+                            server refuses both actions on them anyway. */}
+                        {u.userType === "member" && (
+                          <>
+                            <button
+                              onClick={() => setEditUser(u)}
+                              className="app-focus flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-primary)] transition-colors"
+                              title="Edit member"
+                            >
+                              <FiEdit2 size={15} />
+                            </button>
+                            <button
+                              onClick={() => setDeleteUser(u)}
+                              className="app-focus flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-muted)] hover:bg-red-50 hover:text-red-600 transition-colors"
+                              title="Delete member"
+                            >
+                              <FiTrash2 size={15} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

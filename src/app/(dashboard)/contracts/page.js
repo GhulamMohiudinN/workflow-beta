@@ -1,12 +1,47 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   FiFileText, FiSend, FiTrash2, FiChevronDown, FiChevronUp,
-  FiDownload, FiClock, FiCheckCircle,
+  FiDownload, FiClock, FiCheckCircle, FiPaperclip, FiEye, FiX,
 } from "react-icons/fi";
 import { toast } from "../../../components/Toast";
-import { contractAPI } from "../../api/contractAPI";
+import { contractAPI, openContractDocument } from "../../api/contractAPI";
+
+const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
+const ACCEPTED_DOCUMENTS = ".pdf,.doc,.docx";
+
+const formatBytes = (n = 0) =>
+  n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
+
+/** The attached document's name with View and Download. */
+function DocumentRow({ document: doc, fetchLinks }) {
+  const open = async (mode) => {
+    const result = await openContractDocument(fetchLinks, mode);
+    if (!result.ok) toast.error(result.error);
+  };
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <FiFileText size={16} className="shrink-0 text-red-500" />
+        <div className="min-w-0">
+          <p className="truncate text-xs font-semibold text-slate-800">{doc.fileName}</p>
+          <p className="text-[11px] text-slate-400">{formatBytes(doc.fileSize)}</p>
+        </div>
+      </div>
+      <div className="flex shrink-0 gap-1">
+        <button type="button" onClick={() => open("view")}
+          className="flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-[11px] font-bold text-blue-700 hover:bg-blue-100">
+          <FiEye size={11} /> View
+        </button>
+        <button type="button" onClick={() => open("download")} title="Download"
+          className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50">
+          <FiDownload size={11} />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const EMPTY_FORM = { title: "", recipientName: "", recipientEmail: "", content: "" };
 
@@ -42,6 +77,21 @@ export default function ContractsPage() {
   const [form, setForm]           = useState(EMPTY_FORM);
   const [sending, setSending]     = useState(false);
   const [expandedId, setExpandedId] = useState(null);
+  const [file, setFile]           = useState(null);
+  const fileInputRef              = useRef(null);
+
+  const pickFile = (picked) => {
+    if (!picked) return;
+    const ext = picked.name.split(".").pop().toLowerCase();
+    if (!["pdf", "doc", "docx"].includes(ext)) return toast.error("Attach a PDF or Word document");
+    if (picked.size > MAX_DOCUMENT_BYTES) return toast.error("Documents must be 10 MB or smaller");
+    setFile(picked);
+  };
+
+  const clearFile = () => {
+    setFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const load = async () => {
     setLoading(true);
@@ -57,15 +107,16 @@ export default function ContractsPage() {
     if (!form.title.trim()) return toast.error("Contract title is required");
     if (!form.recipientName.trim()) return toast.error("Recipient name is required");
     if (!form.recipientEmail.trim()) return toast.error("Recipient email is required");
-    if (!form.content.trim()) return toast.error("Add the contract text before sending");
+    if (!form.content.trim() && !file) return toast.error("Write the contract terms, attach a document, or both");
 
     setSending(true);
-    const res = await contractAPI.create(form);
+    const res = await contractAPI.create(form, file);
     setSending(false);
 
     if (res.success) {
       toast.success(`Sent to ${form.recipientEmail} — they'll get a link to review and sign`);
       setForm(EMPTY_FORM);
+      clearFile();
       load();
     } else {
       toast.error(res.error || "Failed to send contract");
@@ -108,9 +159,39 @@ export default function ContractsPage() {
             placeholder="name@example.com" type="email" className={inputCls} />
         </Field>
 
-        <Field label="Contract Text">
+        <Field label="Contract Document (PDF or Word)">
+          {file ? (
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5">
+              <div className="flex min-w-0 items-center gap-2">
+                <FiPaperclip size={14} className="shrink-0 text-blue-600" />
+                <span className="truncate text-sm font-semibold text-slate-800">{file.name}</span>
+                <span className="shrink-0 text-xs text-slate-500">{formatBytes(file.size)}</span>
+              </div>
+              <button type="button" onClick={clearFile} title="Remove"
+                className="rounded p-1 text-slate-500 hover:bg-white hover:text-red-600">
+                <FiX size={14} />
+              </button>
+            </div>
+          ) : (
+            <button type="button" onClick={() => fileInputRef.current?.click()}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-200 px-3 py-4 text-sm font-semibold text-slate-500 hover:border-blue-300 hover:text-blue-700">
+              <FiPaperclip size={14} /> Attach a PDF or Word document
+            </button>
+          )}
+          <input ref={fileInputRef} type="file" accept={ACCEPTED_DOCUMENTS} className="hidden"
+            onChange={(e) => pickFile(e.target.files?.[0])} />
+          <p className="mt-1 text-[11px] text-slate-400">
+            The recipient can view and download it before signing. Up to 10 MB.
+          </p>
+        </Field>
+
+        <Field label={file ? "Contract Text or Covering Note (optional)" : "Contract Text"}>
           <textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })}
-            rows={8} placeholder="Paste or write the full contract text the recipient will read and sign..." className={inputCls} />
+            rows={file ? 4 : 8}
+            placeholder={file
+              ? "Optional: a short note shown above the attached document..."
+              : "Paste or write the full contract text the recipient will read and sign, or attach a document above..."}
+            className={inputCls} />
         </Field>
 
         <button type="button" onClick={handleSend} disabled={sending}
@@ -141,6 +222,11 @@ export default function ContractsPage() {
                   <div className="flex items-center gap-2">
                     <p className="truncate text-sm font-black text-slate-900">{c.title}</p>
                     <StatusBadge status={c.status} />
+                    {c.document && (
+                      <span title={c.document.fileName} className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                        <FiPaperclip size={10} /> Document
+                      </span>
+                    )}
                   </div>
                   <p className="mt-0.5 text-xs font-medium text-slate-500">
                     To {c.recipientName} ({c.recipientEmail})
@@ -163,8 +249,25 @@ export default function ContractsPage() {
 
               {expanded && (
                 <div className="iris-print-area border-t border-slate-100 p-5">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Contract Text</p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{c.content}</p>
+                  {c.document && (
+                    <div className="iris-no-print mb-4">
+                      <p className="mb-2 text-[10px] font-black uppercase tracking-wider text-slate-400">Attached Document</p>
+                      <DocumentRow document={c.document} fetchLinks={() => contractAPI.documentLinks(c._id)} />
+                      {c.document.sha256 && (
+                        <p className="mt-1.5 break-all font-mono text-[10px] text-slate-400" title="SHA-256 fingerprint taken at upload">
+                          Fingerprint {c.document.sha256}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {c.content && (
+                    <>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                        {c.document ? "Covering Note" : "Contract Text"}
+                      </p>
+                      <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{c.content}</p>
+                    </>
+                  )}
 
                   {c.status === "signed" && (
                     <div className="mt-5 border-t border-slate-100 pt-5">

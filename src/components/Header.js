@@ -13,6 +13,7 @@ import {
 import { Avatar } from "./Badge";
 import { Button } from "./Button";
 import CommandSearch from "./CommandSearch";
+import InstallAppButton from "./InstallAppButton";
 
 export const Header = ({
   onMenuClick,
@@ -87,6 +88,8 @@ export const Header = ({
               </div>
             )}
           </div>
+
+          <InstallAppButton />
 
           <button
             type="button"

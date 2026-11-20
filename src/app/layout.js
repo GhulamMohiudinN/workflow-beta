@@ -16,6 +16,15 @@ const geistMono = Geist_Mono({
 export const metadata = {
   title: "Iris Monde",
   description: "Iris Monde Workspace",
+  // The installable-app pieces. The manifest itself is app/manifest.js;
+  // iOS reads these instead of it.
+  icons: { apple: "/apple-touch-icon.png" },
+  appleWebApp: { title: "Iris Monde", statusBarStyle: "default" },
+};
+
+// Colours the installed app's title bar to match the brand.
+export const viewport = {
+  themeColor: "#01114c",
 };
 
 export default function RootLayout({ children }) {

@@ -9,6 +9,7 @@ import authAPI from "../../api/auth";
 import { toast } from "../../../components/Toast";
 import { FiEye, FiEyeOff, FiLock, FiMail, FiShield, FiArrowLeft } from "react-icons/fi";
 import AuthPanel from "../AuthPanel";
+import { homeRouteFor } from "../../utils/homeRoute";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -24,20 +25,7 @@ export default function LoginPage() {
     try {
       const data = await authAPI.login(formData);
       toast.success("Login successful!");
-      const role = data.user?.userType || data.role || localStorage.getItem("role");
-      if (role === "owner") {
-        // A platform operator has no workspace by design, so the branch below
-        // would otherwise send them into the workspace-setup wizard.
-        router.push("/platform");
-      } else if (role === "member") {
-        router.push("/users/dashboardUsers");
-      } else if (!data.workspace) {
-        // Verified but never finished the workspace-setup wizard — resume it
-        // instead of dropping them on a dashboard with no workspace.
-        router.push("/workspaceCreation");
-      } else {
-        router.push("/dashboard");
-      }
+      router.push(homeRouteFor(data.user, data.workspace));
     } catch (err) {
       const message = err.response?.data?.message || err.message || "Login failed. Please try again.";
       setError(message);
