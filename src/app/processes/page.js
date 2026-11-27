@@ -131,6 +131,8 @@ export default function ProcessesPage() {
   const [userRole, setUserRole] = useState(null);
 
   const canEdit = userRole === "admin" || userRole === "editor";
+  // Editors create and edit; only admins delete. The server enforces both.
+  const canDelete = userRole === "admin";
 
   useEffect(() => {
     let resolvedRole = "viewer";
@@ -395,6 +397,7 @@ export default function ProcessesPage() {
               key={process.id}
               process={process}
               canEdit={canEdit}
+              canDelete={canDelete}
               onDelete={() => setDeleteConfirm(process)}
               isDeleting={isDeleting}
             />
@@ -406,13 +409,14 @@ export default function ProcessesPage() {
         <ProcessTable
           processes={filteredProcesses}
           canEdit={canEdit}
+          canDelete={canDelete}
           onDelete={setDeleteConfirm}
           isDeleting={isDeleting}
         />
       )}
 
       {filteredProcesses.length === 0 && (
-        <EmptyState canEdit={canEdit} search={search} />
+        <EmptyState canEdit={canEdit} canDelete={canDelete} search={search} />
       )}
 
       {deleteConfirm && (
@@ -459,7 +463,7 @@ function MetricCard({ title, value, detail, icon: Icon, tone }) {
   );
 }
 
-function ProcessCard({ process, canEdit, onDelete, isDeleting }) {
+function ProcessCard({ process, canEdit, canDelete, onDelete, isDeleting }) {
   const meta = statusMeta[process.status?.toLowerCase()] || statusMeta.draft;
   const StatusIcon = meta.icon;
   const category =
@@ -537,6 +541,7 @@ function ProcessCard({ process, canEdit, onDelete, isDeleting }) {
           <ActionCluster
             targetId={targetId}
             canEdit={canEdit}
+            canDelete={canDelete}
             onDelete={onDelete}
             isDeleting={isDeleting}
           />
@@ -546,7 +551,7 @@ function ProcessCard({ process, canEdit, onDelete, isDeleting }) {
   );
 }
 
-function ProcessTable({ processes, canEdit, onDelete, isDeleting }) {
+function ProcessTable({ processes, canEdit, canDelete, onDelete, isDeleting }) {
   return (
     <Card>
       <div className="overflow-x-auto">
@@ -622,6 +627,7 @@ function ProcessTable({ processes, canEdit, onDelete, isDeleting }) {
                     <ActionCluster
                       targetId={targetId}
                       canEdit={canEdit}
+                      canDelete={canDelete}
                       onDelete={() => onDelete(process)}
                       isDeleting={isDeleting}
                     />
@@ -636,7 +642,7 @@ function ProcessTable({ processes, canEdit, onDelete, isDeleting }) {
   );
 }
 
-function ActionCluster({ targetId, canEdit, onDelete, isDeleting }) {
+function ActionCluster({ targetId, canEdit, canDelete, onDelete, isDeleting }) {
   if (!targetId) {
     return <span className="text-xs font-semibold text-red-500">ID missing</span>;
   }
@@ -651,16 +657,18 @@ function ActionCluster({ targetId, canEdit, onDelete, isDeleting }) {
             label="Edit process"
             icon={FiEdit2}
           />
-          <button
-            type="button"
-            onClick={onDelete}
-            disabled={isDeleting}
-            className="app-focus flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-muted)] hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-            aria-label="Delete process"
-            title="Delete process"
-          >
-            <FiTrash2 size={15} />
-          </button>
+          {canDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={isDeleting}
+              className="app-focus flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-muted)] hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+              aria-label="Delete process"
+              title="Delete process"
+            >
+              <FiTrash2 size={15} />
+            </button>
+          )}
         </>
       )}
       <FiMoreVertical size={15} className="text-[var(--color-faint)]" />

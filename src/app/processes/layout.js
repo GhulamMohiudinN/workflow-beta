@@ -9,7 +9,9 @@ import { LuChartNoAxesCombined } from "react-icons/lu";
 import { MdOutlineDashboardCustomize } from "react-icons/md";
 import { PiNetworkThin } from "react-icons/pi";
 import { RiCompassesLine } from "react-icons/ri";
-import { socket } from "../utils/socket";
+import { disconnectSocket } from "../utils/socket";
+import { buildNavigation } from "../../components/navigation";
+import { canOpenPath, workspaceRoleOf } from "../utils/permissions";
 import Footer from "../../components/Footer";
 import Header from "../../components/Header";
 import Sidebar from "../../components/Sidebar";
@@ -28,87 +30,10 @@ export default function ProcessesLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const navigation = useMemo(() => {
-    const items = [
-      {
-        name: "Dashboard",
-        href: "/dashboard",
-        icon: FiGrid,
-        current: pathname.includes("/dashboard"),
-      },
-      {
-        name: "Company",
-        href: "/company",
-        icon: CgOrganisation,
-        current: pathname.includes("/company"),
-      },
-      {
-        name: "Processes",
-        href: "/processes",
-        icon: PiNetworkThin,
-        current: pathname.includes("/processes"),
-      },
-      {
-        name: "Templates",
-        href: "/templates",
-        icon: MdOutlineDashboardCustomize,
-        current: pathname.includes("/templates"),
-      },
-      {
-        name: "Process Builder",
-        href: "/builder",
-        icon: RiCompassesLine,
-        current: pathname.includes("/builder"),
-      },
-    ];
-
-    if (role === "admin" || role === "superadmin" || role === "editor") {
-      items.push({
-        name: "Users",
-        href: "/users",
-        icon: FiUsers,
-        current: pathname.includes("/users"),
-      });
-    }
-
-    items.push(
-      {
-        name: "Settings",
-        href: "/settings",
-        icon: FiSettings,
-        current: pathname.includes("/settings"),
-      },
-      {
-        name: "Activity Logs",
-        href: "/activity-logs",
-        icon: CiViewList,
-        current: pathname.includes("/activity-logs"),
-      },
-      {
-        name: "Reports",
-        href: "/reports",
-        icon: LuChartNoAxesCombined,
-        current: pathname.includes("/reports"),
-      },
-      {
-        name: "IRIS Reporting",
-        href: "/iris-reporting",
-        icon: FiShield,
-        current: pathname.includes("/iris-reporting"),
-      },
-    );
-
-    if (role === "admin") {
-      items.push({
-        name: "Invoicing",
-        href: "/invoicing",
-        icon: FiDollarSign,
-        current: pathname.includes("/invoicing"),
-      });
-    }
-
-    return items;
-  }, [pathname, role]);
+  const navigation = useMemo(
+    () => buildNavigation(pathname, user, role),
+    [pathname, user, role]
+  );
 
   useEffect(() => {
     const initId = window.setTimeout(() => {
@@ -148,16 +73,15 @@ export default function ProcessesLayout({ children }) {
       return;
     }
 
+    if (!canOpenPath(user, pathname)) {
+      router.replace(workspaceRoleOf(user) === "viewer" ? "/users/processesUsers" : "/dashboard");
+      return;
+    }
+
     const readyId = window.setTimeout(() => setLoading(false), 0);
     return () => window.clearTimeout(readyId);
-  }, [isMounted, role, router, user, workspace]);
+  }, [isMounted, role, router, user, workspace, pathname]);
 
-  useEffect(() => {
-    if (!isMounted) return;
-
-    const userId = localStorage.getItem("userId");
-    if (userId) socket.emit("register", userId);
-  }, [isMounted]);
 
   if (!isMounted || loading) return null;
 
@@ -168,6 +92,8 @@ export default function ProcessesLayout({ children }) {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("userId");
+    localStorage.removeItem("token");
+    disconnectSocket();
     setUser(null);
     setRole(null);
     setWorkspace(null);
@@ -191,7 +117,6 @@ export default function ProcessesLayout({ children }) {
           user={user}
           workspace={workspace}
           onLogout={signout}
-          notifications={[]}
         />
 
         <main className="flex-1 py-6">

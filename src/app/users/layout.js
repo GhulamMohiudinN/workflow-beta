@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import NotificationBell from "../../components/NotificationBell";
+import { disconnectSocket } from "../utils/socket";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -45,7 +47,8 @@ export default function UserLayout({ children }) {
   const isActive = (href) => pathname === href || pathname.startsWith(href + "/");
 
   const handleSignOut = () => {
-    ["user","role","workspace","accessToken","refreshToken","userId"].forEach((k) => localStorage.removeItem(k));
+    ["user","role","workspace","accessToken","refreshToken","userId","token"].forEach((k) => localStorage.removeItem(k));
+    disconnectSocket();
     router.push("/login");
   };
 
@@ -121,7 +124,7 @@ export default function UserLayout({ children }) {
             </div>
             <div className="min-w-0">
               <p className="text-sm font-black text-[var(--color-text)] truncate">{user?.name || "User"}</p>
-              <p className="text-xs text-[var(--color-muted)] truncate capitalize">{user?.userType || "member"}</p>
+              <p className="text-xs text-[var(--color-muted)] truncate capitalize">{user?.role || user?.userType || "member"}</p>
             </div>
           </div>
           <button
@@ -156,17 +159,14 @@ export default function UserLayout({ children }) {
             </div>
 
             <div className="flex items-center gap-3 ml-auto">
-              <button className="relative p-2 text-[var(--color-muted)] hover:text-[var(--color-text)] rounded-lg hover:bg-[var(--color-bg)] transition-colors">
-                <FiBell className="h-4 w-4" />
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[var(--color-danger)] rounded-full" />
-              </button>
+              <NotificationBell />
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-full bg-[var(--color-primary)] flex items-center justify-center text-white text-xs font-black">
                   {initials}
                 </div>
                 <div className="hidden md:block">
                   <p className="text-sm font-black text-[var(--color-text)] leading-none">{user?.name || "User"}</p>
-                  <p className="text-xs text-[var(--color-muted)] mt-0.5 capitalize">{user?.userType || "member"}</p>
+                  <p className="text-xs text-[var(--color-muted)] mt-0.5 capitalize">{user?.role || user?.userType || "member"}</p>
                 </div>
               </div>
             </div>

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FiShield, FiSave, FiEye, FiEyeOff, FiAlertCircle, FiTrash2, FiLock,
   FiCheckCircle, FiUsers, FiDatabase, FiZap, FiClock,
@@ -34,6 +34,14 @@ export default function SettingsPage() {
   const workspaceJson  = typeof window !== "undefined" ? localStorage.getItem("workspace") : null;
   const workspace      = workspaceJson ? JSON.parse(workspaceJson) : { companyName: "Iris Monde Workspace" };
   const workspaceName  = workspace.companyName || "Your Iris Monde Workspace";
+  const [isOwner, setIsOwner] = useState(false);
+  useEffect(() => {
+    try {
+      setIsOwner(JSON.parse(localStorage.getItem("user") || "null")?.userType === "admin");
+    } catch {
+      setIsOwner(false);
+    }
+  }, []);
 
   // ── Handlers ────────────────────────────────────────────────────────────
 
@@ -189,6 +197,9 @@ export default function SettingsPage() {
         </Card>
 
         {/* ── Section 3: Danger Zone ────────────────────────────────────── */}
+        {/* Owner only: an admin they invited cannot delete the workspace,
+            and the server refuses them if they try. */}
+        {isOwner && (
         <div className="rounded-lg border-2 border-red-200 bg-red-50/40 overflow-hidden shadow-sm">
           <div className="flex items-center gap-3 px-5 py-4 border-b border-red-200 bg-red-50/70">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-100 text-red-600">
@@ -215,6 +226,7 @@ export default function SettingsPage() {
             </Button>
           </div>
         </div>
+        )}
       </div>
 
       {/* ── Delete Confirmation Modal ─────────────────────────────────────── */}

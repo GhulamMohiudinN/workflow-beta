@@ -1,7 +1,9 @@
 "use client";
 import { useMemo, useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { socket } from "../utils/socket";
+import { disconnectSocket } from "../utils/socket";
+import { canOpenPath, workspaceRoleOf } from "../utils/permissions";
+import { buildNavigation } from "../../components/navigation";
 import api from "../api/axios";
 
 import {
@@ -41,92 +43,10 @@ export default function DashboardLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const navigation = useMemo(() => {
-    const items = [
-      {
-        name: "Dashboard",
-        href: "/dashboard",
-        icon: FiGrid,
-        current: pathname.includes("/dashboard"),
-      },
-      {
-        name: "Company",
-        href: "/company",
-        icon: CgOrganisation,
-        current: pathname.includes("/company"),
-      },
-      {
-        name: "Processes",
-        href: "/processes",
-        icon: PiNetworkThin,
-        current: pathname.includes("/processes"),
-      },
-      {
-        name: "Templates",
-        href: "/templates",
-        icon: MdOutlineDashboardCustomize,
-        current: pathname.includes("/templates"),
-      },
-      {
-        name: "Process Builder",
-        href: "/builder",
-        icon: RiCompassesLine,
-        current: pathname.includes("/builder"),
-      },
-    ];
-
-    if (role === "admin" || role === "superadmin" || role === "editor") {
-      items.push({
-        name: "Users",
-        href: "/users",
-        icon: FiUsers,
-        current: pathname.includes("/users"),
-      });
-    }
-
-    items.push({
-      name: "Settings",
-      href: "/settings",
-      icon: FiSettings,
-      current: pathname.includes("/settings"),
-    });
-    items.push({
-      name: "Activity Logs",
-      href: "/activity-logs",
-      icon: CiViewList,
-      current: pathname.includes("/activity-logs"),
-    });
-    items.push({
-      name: "Reports",
-      href: "/reports",
-      icon: LuChartNoAxesCombined,
-      current: pathname.includes("/reports"),
-    });
-    // Everything below is admin-only on the server. IRIS Reporting used to be
-    // shown to Editors too, who then got a page of refused requests.
-    if (role === "admin") {
-      items.push({
-        name: "IRIS Reporting",
-        href: "/iris-reporting",
-        icon: FiShield,
-        current: pathname.includes("/iris-reporting"),
-      });
-      items.push({
-        name: "Invoicing",
-        href: "/invoicing",
-        icon: FiDollarSign,
-        current: pathname.includes("/invoicing"),
-      });
-      items.push({
-        name: "Contracts",
-        href: "/contracts",
-        icon: FiFileText,
-        current: pathname.includes("/contracts"),
-      });
-    }
-
-    return items;
-  }, [pathname, role]);
+  const navigation = useMemo(
+    () => buildNavigation(pathname, user, role),
+    [pathname, user, role]
+  );
 
   // Single initialization effect - runs once on client mount
   useEffect(() => {
@@ -167,22 +87,17 @@ export default function DashboardLayout({ children }) {
       return;
     }
 
+    if (!canOpenPath(user, pathname) && workspaceRoleOf(user) === "editor") {
+      router.replace("/dashboard");
+      return;
+    }
+
     const readyId = window.setTimeout(() => {
       setLoading(false);
     }, 0);
 
     return () => window.clearTimeout(readyId);
-  }, [isMounted, user, role, workspace, router]);
-
-  // Socket.io registration effect
-  useEffect(() => {
-    if (!isMounted) return;
-
-    const userId = localStorage.getItem("userId");
-    if (userId) {
-      socket.emit("register", userId);
-    }
-  }, [isMounted]);
+  }, [isMounted, user, role, workspace, router, pathname]);
 
   // Render only when mounted on client
   if (!isMounted || loading) {
@@ -196,6 +111,8 @@ export default function DashboardLayout({ children }) {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("userId");
+    localStorage.removeItem("token");
+    disconnectSocket();
     setUser(null);
     setRole(null);
     setWorkspace(null);
@@ -219,7 +136,6 @@ export default function DashboardLayout({ children }) {
           user={user}
           workspace={workspace}
           onLogout={signout}
-          notifications={[]}
         />
 
         <main className="flex-1 py-6">

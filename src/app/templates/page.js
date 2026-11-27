@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { workspaceRoleOf } from "../utils/permissions";
 import Link from "next/link";
 import {
   FiAlertCircle,
@@ -110,6 +111,17 @@ const categoryMeta = {
 };
 
 export default function TemplatesPage() {
+  // Editors create and edit templates; only admins delete them. The server
+  // enforces this — the button is hidden so Editors are not offered a
+  // delete that will be refused.
+  const [canDelete, setCanDelete] = useState(false);
+  useEffect(() => {
+    try {
+      setCanDelete(workspaceRoleOf(JSON.parse(localStorage.getItem("user") || "null")) === "admin");
+    } catch {
+      setCanDelete(false);
+    }
+  }, []);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -353,7 +365,7 @@ export default function TemplatesPage() {
             <TemplateCard
               key={template.id}
               template={template}
-              onDelete={() => setDeleteConfirm(template)}
+              onDelete={canDelete ? () => setDeleteConfirm(template) : undefined}
               isDeleting={isDeleting}
             />
           ))}
@@ -363,7 +375,7 @@ export default function TemplatesPage() {
       {filteredTemplates.length > 0 && viewMode === "list" && (
         <TemplateTable
           templates={filteredTemplates}
-          onDelete={setDeleteConfirm}
+          onDelete={canDelete ? setDeleteConfirm : undefined}
           isDeleting={isDeleting}
         />
       )}
@@ -542,7 +554,7 @@ function TemplateTable({ templates, onDelete, isDeleting }) {
                   <td className="px-5 py-4">
                     <ActionCluster
                       targetId={targetId}
-                      onDelete={() => onDelete(template)}
+                      onDelete={onDelete ? () => onDelete(template) : undefined}
                       isDeleting={isDeleting}
                     />
                   </td>
@@ -574,16 +586,18 @@ function ActionCluster({ targetId, onDelete, isDeleting }) {
         label="Use template"
         icon={FiPlus}
       />
-      <button
-        type="button"
-        onClick={onDelete}
-        disabled={isDeleting}
-        className="app-focus flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-muted)] hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-        aria-label="Delete template"
-        title="Delete template"
-      >
-        <FiTrash2 size={15} />
-      </button>
+      {onDelete && (
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={isDeleting}
+          className="app-focus flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-muted)] hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+          aria-label="Delete template"
+          title="Delete template"
+        >
+          <FiTrash2 size={15} />
+        </button>
+      )}
     </div>
   );
 }

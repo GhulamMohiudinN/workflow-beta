@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
-  FiBell,
   FiChevronDown,
   FiHelpCircle,
   FiLogOut,
@@ -14,16 +14,16 @@ import { Avatar } from "./Badge";
 import { Button } from "./Button";
 import CommandSearch from "./CommandSearch";
 import InstallAppButton from "./InstallAppButton";
+import NotificationBell from "./NotificationBell";
 
 export const Header = ({
   onMenuClick,
   user,
   workspace,
   onLogout,
-  notifications = [],
 }) => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const router = useRouter();
   const displayName = user?.name || user?.email || "Alex Rivera";
 
   return (
@@ -46,48 +46,7 @@ export const Header = ({
         </div>
 
         <div className="flex items-center gap-1.5">
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setNotificationsOpen((value) => !value)}
-              className="app-focus relative flex h-9 w-9 items-center justify-center rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
-              aria-label="Notifications"
-            >
-              <FiBell size={17} />
-              {notifications.length > 0 && (
-                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[var(--color-danger)]" />
-              )}
-            </button>
-
-            {notificationsOpen && (
-              <div className="app-card absolute right-0 mt-2 w-80 overflow-hidden shadow-[var(--shadow-popover)]">
-                <div className="border-b border-[var(--color-border)] px-4 py-3">
-                  <h3 className="text-sm font-bold">Notifications</h3>
-                </div>
-                <div className="max-h-80 overflow-y-auto">
-                  {notifications.length > 0 ? (
-                    notifications.map((notification, index) => (
-                      <div
-                        key={`${notification.message}-${index}`}
-                        className="border-b border-[var(--color-border)] px-4 py-3 last:border-0"
-                      >
-                        <p className="text-sm font-medium text-[var(--color-text)]">
-                          {notification.message}
-                        </p>
-                        <p className="mt-1 text-xs text-[var(--color-muted)]">
-                          {notification.time}
-                        </p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="px-4 py-8 text-center text-sm text-[var(--color-muted)]">
-                      No notifications
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          <NotificationBell />
 
           <InstallAppButton />
 
@@ -125,10 +84,16 @@ export const Header = ({
                     {user?.email || user?.role || "Iris Monde Workspace user"}
                   </p>
                 </div>
-                <button className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]">
+                <button
+                  onClick={() => { setUserMenuOpen(false); router.push("/profile"); }}
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
+                >
                   <FiUser size={15} /> Profile
                 </button>
-                <button className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]">
+                <button
+                  onClick={() => { setUserMenuOpen(false); router.push("/settings"); }}
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
+                >
                   <FiSettings size={15} /> Settings
                 </button>
                 <button

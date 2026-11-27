@@ -101,10 +101,19 @@ export default function UserProcessesPage() {
     return () => clearTimeout(searchTimer.current);
   }, [search]);
 
+  const [showingAll, setShowingAll] = useState(false);
+
   const loadProcesses = useCallback(async () => {
     setIsLoading(true); setError(null);
     try {
-      const result = await processAPI.getAssignedProcesses();
+      // Viewers see every process, read-only — that is what their role
+      // promises. Anyone else here falls back to what is assigned to them.
+      let isViewer = false;
+      try { isViewer = JSON.parse(localStorage.getItem("user") || "null")?.role === "viewer"; } catch {}
+      setShowingAll(isViewer);
+      const result = isViewer
+        ? await processAPI.getWorkspaceProcesses({ limit: 100 })
+        : await processAPI.getAssignedProcesses();
       if (result.success) {
         setAllProcesses(Array.isArray(result.data) ? result.data : []);
       } else {
@@ -162,7 +171,7 @@ export default function UserProcessesPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-black text-[var(--color-text)]">My Processes</h1>
+          <h1 className="text-2xl font-black text-[var(--color-text)]">{showingAll ? "Processes" : "My Processes"}</h1>
           <p className="mt-1 text-sm font-medium text-[var(--color-muted)]">
             Workflows you are assigned to
           </p>
@@ -178,7 +187,7 @@ export default function UserProcessesPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Total Assigned" value={allProcesses.length} icon={FiLayers}      toneClass="bg-blue-50 text-blue-600" />
+        <StatCard label={showingAll ? "Total Processes" : "Total Assigned"} value={allProcesses.length} icon={FiLayers}      toneClass="bg-blue-50 text-blue-600" />
         <StatCard label="Completed"      value={completedCount}       icon={FiCheckCircle} toneClass="bg-emerald-50 text-emerald-600" />
         <StatCard label="Total Steps"    value={totalSteps}           icon={FiBarChart2}   toneClass="bg-indigo-50 text-indigo-600" />
         <StatCard label="Avg Progress"   value={`${avgProgress}%`}   icon={FiTrendingUp}  toneClass="bg-amber-50 text-amber-600" />

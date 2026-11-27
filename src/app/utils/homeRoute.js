@@ -11,11 +11,11 @@ export function homeRouteFor(user, workspace) {
   // before the no-workspace branch below sends them into the setup wizard.
   if (user.userType === "owner") return "/platform";
 
-  // Editors and viewers get the member area. A member invited as Admin falls
-  // through to the full dashboard: sending every member here regardless of
-  // role is why an invited admin could never reach invoices, contracts or
-  // IRIS evidence.
-  if (user.userType === "member" && user.role !== "admin") return "/users/dashboardUsers";
+  // Viewers get the read-only member area. Admins and Editors use the main app
+  // — Editors create and edit processes there, which the member area cannot
+  // do. Sending every member here regardless of role is why an invited admin
+  // could never reach invoices, contracts or IRIS evidence.
+  if (user.userType === "member" && !["admin", "editor"].includes(user.role)) return "/users/dashboardUsers";
 
   // Verified but never finished the workspace-setup wizard: resume it rather
   // than dropping them on a dashboard with no workspace.
