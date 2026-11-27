@@ -34,7 +34,7 @@ export default function AppLauncher() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#01114c]">
-      <img src="/icon-192.png" alt="Iris Monde" className="h-16 w-16 animate-pulse rounded-2xl" />
+      <img src="/icon-192.png" alt="Iris Monde" className="h-16 w-16 animate-pulse rounded-[7px] object-contain" />
     </div>
   );
 }

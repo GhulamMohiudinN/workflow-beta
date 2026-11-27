@@ -157,7 +157,7 @@ export default function PlatformConsole() {
       <header className="border-b border-[var(--color-border)] bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="" className="h-8 w-8 rounded-lg" />
+            <img src="/logo.png" alt="" className="h-9 w-9 shrink-0 rounded-[7px] object-contain" />
             <div>
               <h1 className="text-base font-black leading-tight text-[var(--color-text)]">
                 Client companies
